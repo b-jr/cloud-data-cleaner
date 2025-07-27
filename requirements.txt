@@ -1,7 +1,7 @@
-# Requires Python >= 3.9
-
-Flask==2.2.5                  # Web framework for API
-Flask-Cors==3.1.1             # CORS support for Flask
-PyJWT==2.8.0                  # JWT authentication
-bcrypt==4.1.2                 # Secure password hashing
-mysql-connector-python==8.4.0 # MySQL database driver
+# Updated requirements.txt with compatible versions
+Flask==2.2.5
+Flask-Cors>=4.0.0  # Updated from 3.1.1 to current version
+PyJWT==2.8.0
+bcrypt==4.1.2
+mysql-connector-python==8.4.0
+gunicorn==21.2.0  # Added for production deployment
