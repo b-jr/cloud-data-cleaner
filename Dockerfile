@@ -10,7 +10,7 @@ WORKDIR /app
 # This is done separately to leverage Docker's build cache. If only requirements.txt changes,
 # the pip install step will be re-run; otherwise, it uses the cached layer.
 COPY requirements.txt .
-COPY main.py
+COPY main.py .
 
 # Install the Python dependencies listed in requirements.txt.
 # --no-cache-dir: Prevents pip from storing downloaded packages in a cache, saving space.
