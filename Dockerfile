@@ -1,28 +1,25 @@
-# Use the official Python image as a base.
-# We're choosing Python 3.9 on a slim Debian Buster distribution for a smaller image size.
 FROM python:3.9-slim-buster
 
-# Set the working directory inside the container.
-# All subsequent commands will be executed relative to this directory.
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc python3-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set work directory
 WORKDIR /app
 
-# Copy the requirements.txt file into the container's working directory.
-# This is done separately to leverage Docker's build cache. If only requirements.txt changes,
-# the pip install step will be re-run; otherwise, it uses the cached layer.
+# Copy requirements first to leverage Docker cache
 COPY requirements.txt .
-COPY main.py .
 
-# Install the Python dependencies listed in requirements.txt.
-# --no-cache-dir: Prevents pip from storing downloaded packages in a cache, saving space.
-# -r requirements.txt: Installs packages from the specified file.
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Define the port that the container will listen on.
-# Cloud Run injects the PORT environment variable, typically 8080.
-# Setting ENV PORT 8080 here provides a default if PORT isn't set,
-# and also informs Docker that the container intends to expose this port.
-ENV PORT 8080
+# Copy project
+COPY . .
+
+# Set the PORT environment variable
+ENV PORT=8080
 EXPOSE $PORT
 
-# Run the application
-CMD ["python", "main.py"]
+# Run the application with Gunicorn for production
+CMD ["gunicorn", "--bind", "0.0.0.0:$PORT", "main:app"]
