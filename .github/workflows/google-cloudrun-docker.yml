@@ -1,5 +1,4 @@
 steps:
-# Build Docker image
 - name: 'gcr.io/cloud-builders/docker'
   args: [
     'build',
@@ -9,14 +8,12 @@ steps:
   ]
   timeout: 600s
 
-# Push Docker images
 - name: 'gcr.io/cloud-builders/docker'
   args: ['push', 'gcr.io/$PROJECT_ID/cloud-data-cleaner:$COMMIT_SHA']
-  
+
 - name: 'gcr.io/cloud-builders/docker'
   args: ['push', 'gcr.io/$PROJECT_ID/cloud-data-cleaner:latest']
 
-# Deploy to Cloud Run
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   entrypoint: gcloud
   args: [
@@ -25,7 +22,8 @@ steps:
     '--platform', 'managed',
     '--region', 'us-central1',
     '--allow-unauthenticated',
-    '--set-env-vars', 'DB_HOST=$_DB_HOST,DB_USER=$_DB_USER,DB_PASSWORD=$_DB_PASSWORD,DB_NAME=$_DB_NAME,JWT_SECRET_KEY=$_JWT_SECRET_KEY'
+    '--set-env-vars', 'DB_HOST=$_DB_HOST,DB_USER=$_DB_USER,DB_PASSWORD=$_DB_PASSWORD,DB_NAME=$_DB_NAME,JWT_SECRET_KEY=$_JWT_SECRET_KEY',
+    '--memory', '1Gi'
   ]
 
 options:
