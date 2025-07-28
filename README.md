@@ -1,71 +1,48 @@
-# cloud-data-cleaner
-A privacy-focused cloud tool for encrypting, masking, and securely storing CSV files using customizable algorithms. 
+# Cloud Data Cleaner
 
-## Project Goal
+**A privacy-focused cloud tool for encrypting, masking, and securely storing CSV files using customizable algorithms.**
 
-Cloud Data Cleaner provides a simple, secure, cloud-based solution for encrypting and decrypting CSV files. Users can choose from various algorithms to protect their data.
+---
 
-## Features
+## 🚀 Project Goal
 
-- Encrypt/decrypt CSV files with user-selected algorithms
-- Store and access files securely via Google Cloud Platform
-- Web-based UI for uploads and management
-- Authentication via Firebase/Auth0
-- Persistent storage with MySQL
-- Customizable data masking
+Cloud Data Cleaner provides a simple, secure, cloud-based solution for encrypting, decrypting, and masking CSV files. Users can choose from various algorithms to protect and anonymize sensitive data before uploading it to the cloud.
 
-## Tech Stack
+---
 
-- **Frontend:** HTML, CSS, JavaScript
-- **Backend:** Java (Spring Boot, Thymeleaf)
-- **Cloud & Storage:** Google Cloud Platform (GCP)
-- **Authentication:** Firebase/Auth0
-- **Database:** MySQL
-- **DevOps:** GitHub
+## ✨ Features
 
-## Getting Started
+- 🔐 Encrypt/Decrypt CSV files using user-selected algorithms (AES, RSA, etc.)
+- 🧱 Customizable data masking (email, phone, name, credit card, etc.)
+- ☁️ Secure cloud storage using **Google Cloud Platform (GCP)**
+- 🌐 Web-based UI for uploading and managing CSV files
+- 🔑 User authentication via **Firebase** or **Auth0**
+- 💾 Persistent file and metadata storage with **MySQL**
+- 🔄 Download cleaned and protected files securely
 
-> This project is under active development and may change rapidly.
+---
 
-### Prerequisites
+## 🛠️ Tech Stack
 
-- Java 11+
-- Maven
-- Node.js & npm (for frontend)
-- GCP account/credentials
-- MySQL
-- Firebase project
+| Layer       | Technology                         |
+|-------------|-------------------------------------|
+| Frontend    | HTML, CSS, JavaScript              |
+| Backend     | Python (Flask, RestAPI      )      |
+| Cloud       | Google Cloud Platform (GCP)        |
+| Auth        | Firebase / Auth0                   |
+| Database    | MySQL                              |
+| DevOps      | GitHub, GitHub Actions (optional)  |
 
-### Installation
+---
 
-1. **Clone the repository**
-    ```sh
-    git clone https://github.com/b-jr/cloud-data-cleaner.git
-    cd cloud-data-cleaner
-    ```
+## 🧪 Getting Started
 
-2. **Backend Setup**
-    - Coming soon.
+This project is under active development and subject to change. Below are setup instructions for contributing or testing locally.
 
-3. **Frontend Setup**
-    - Coming soon.
+### ✅ Prerequisites
 
-### Usage
-
-- Access the UI at `http://localhost:8080`
-- Upload your CSV file
-- Select encryption/decryption options
-- Authenticate via Firebase/Auth0
-- Download or access files via GCP
-
-## Integration Steps (To be updated)
-
-Details about connecting to GCP, environment variables, and integration testing will be added here.
-
-## Contributors
-
-To be added.
-
-## License
-
-This project is licensed under the MIT License.
+- Python3.11
+- Node.js & npm
+- MySQL server running locally
+- GCP service account credentials (JSON)
+- Firebase 
