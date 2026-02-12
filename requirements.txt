@@ -1,7 +1,4 @@
-# Updated requirements.txt with compatible versions
 Flask==2.2.5
-Flask-Cors>=4.0.0  # Updated from 3.1.1 to current version
-PyJWT==2.8.0
-bcrypt==4.1.2
-mysql-connector-python==8.4.0
-gunicorn==21.2.0  # Added for production deployment
+Flask-Cors>=4.0.0
+cryptography>=42.0.0
+gunicorn==21.2.0

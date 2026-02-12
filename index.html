@@ -3,140 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cipher Tool</title>
-    <!-- Tailwind CSS CDN for easy styling -->
+    <title>Cipher Tool — Local</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom styles for the Inter font and overall body styling */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f0f2f5; /* Light gray background */
+            background-color: #f0f2f5;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh; /* Ensure it takes full viewport height */
-            padding: 1rem; /* Add some padding on smaller screens */
+            min-height: 100vh;
+            padding: 1rem;
         }
-        /* Basic styling for the main container to center content */
         .container {
-            max-width: 900px; /* Max width for larger screens */
-            width: 100%; /* Full width on smaller screens */
+            max-width: 900px;
+            width: 100%;
         }
-        /* Style for the text areas to ensure they are resizable and look good */
         textarea {
-            resize: vertical; /* Allow vertical resizing */
-            min-height: 120px; /* Minimum height for better usability */
+            resize: vertical;
+            min-height: 120px;
         }
-
-        /* Modal specific styles */
         .modal {
             position: fixed;
-            z-index: 1000; /* High z-index to be on top */
+            z-index: 1000;
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
             overflow: auto;
-            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+            background-color: rgba(0,0,0,0.4);
             display: flex;
             justify-content: center;
             align-items: center;
         }
-
         .modal-content {
             background-color: #fefefe;
             margin: auto;
             padding: 2rem;
-            border-radius: 0.75rem; /* rounded-xl */
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
             width: 90%;
             max-width: 500px;
         }
-
         .close-button {
             color: #aaa;
             float: right;
             font-size: 28px;
             font-weight: bold;
         }
-
         .close-button:hover,
         .close-button:focus {
             color: black;
             text-decoration: none;
             cursor: pointer;
         }
-
-        /* Specific styles for file list in modal */
         #savedFilesList {
             max-height: 300px;
             overflow-y: auto;
-            border: 1px solid #e2e8f0; /* gray-200 */
-            border-radius: 0.5rem; /* rounded-lg */
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
             padding: 0.5rem;
-            background-color: #f9fafb; /* gray-50 */
+            background-color: #f9fafb;
         }
         .file-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 0.75rem;
-            border-bottom: 1px solid #edf2f7; /* gray-100 */
+            border-bottom: 1px solid #edf2f7;
         }
         .file-item:last-child {
             border-bottom: none;
         }
         .file-item-name {
             font-weight: 500;
-            color: #2d3748; /* gray-800 */
+            color: #2d3748;
             flex-grow: 1;
         }
         .file-item-actions button {
             margin-left: 0.5rem;
             padding: 0.3rem 0.7rem;
-            border-radius: 0.375rem; /* rounded-md */
-            font-size: 0.875rem; /* text-sm */
-            font-weight: 600; /* font-semibold */
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 600;
             transition: background-color 0.2s ease-in-out;
         }
         .file-item-actions .view-btn {
-            background-color: #4299e1; /* blue-500 */
+            background-color: #4299e1;
             color: white;
         }
         .file-item-actions .view-btn:hover {
-            background-color: #3182ce; /* blue-600 */
+            background-color: #3182ce;
         }
         .file-item-actions .delete-btn {
-            background-color: #ef4444; /* red-500 */
+            background-color: #ef4444;
             color: white;
         }
         .file-item-actions .delete-btn:hover {
-            background-color: #dc2626; /* red-600 */
+            background-color: #dc2626;
         }
     </style>
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
     <div class="container bg-white p-8 rounded-xl shadow-lg border border-gray-200">
-        <h1 class="text-4xl font-extrabold text-center text-gray-800 mb-8">Cipher Tool</h1>
+        <h1 class="text-4xl font-extrabold text-center text-gray-800 mb-2">Cipher Tool</h1>
+        <p class="text-center text-gray-500 text-sm mb-8">Local mode — your data never leaves this machine</p>
 
-        <!-- Account Status and Actions -->
-        <div class="text-center text-gray-600 text-sm mb-4">
-            <span id="authStatus" class="font-semibold">Not signed in.</span><br>
-            User ID: <span id="userIdDisplay" class="font-mono text-gray-800">N/A</span>
-        </div>
-        <div class="flex justify-center space-x-4 mb-8">
-            <button id="signInSignUpButton"
-                    class="px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200">
-                Sign In / Sign Up
-            </button>
-            <button id="signOutButton"
-                    class="px-6 py-3 bg-red-600 text-white font-bold rounded-lg shadow-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition duration-200"
-                    style="display: none;">
-                Sign Out
-            </button>
+        <!-- View Saved Files Button -->
+        <div class="flex justify-center mb-8">
             <button id="viewSavedFilesButton"
-                    class="px-6 py-3 bg-teal-600 text-white font-bold rounded-lg shadow-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 transition duration-200"
-                    style="display: none;">
+                    class="px-6 py-3 bg-teal-600 text-white font-bold rounded-lg shadow-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 transition duration-200">
                 View Saved Files
             </button>
         </div>
@@ -146,13 +122,14 @@
             <label for="cipherSelect" class="block text-gray-700 text-lg font-semibold mb-2">Select Cipher:</label>
             <select id="cipherSelect"
                     class="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 ease-in-out text-gray-900 text-xl font-bold">
+                <option value="aes256">AES-256 (Password Protected)</option>
                 <option value="caesar">Caesar Cipher</option>
                 <option value="polybius">Polybius Square (Standard)</option>
                 <option value="custom-polybius">Polybius Square (Custom Grid)</option>
             </select>
         </div>
 
-        <!-- Input File Section (for text to be ciphered) -->
+        <!-- Input File Section -->
         <div class="mb-6">
             <label for="inputFile" class="block text-gray-700 text-lg font-semibold mb-2">Upload CSV File (.csv):</label>
             <input type="file" id="inputFile" accept=".csv"
@@ -160,14 +137,22 @@
             <p id="fileNameDisplay" class="text-sm text-gray-500 mt-2"></p>
         </div>
 
+        <!-- AES-256 Password Input -->
+        <div id="aesPasswordContainer" class="mb-8">
+            <label for="aesPassword" class="block text-gray-700 text-lg font-semibold mb-2">Encryption Password (min 8 chars):</label>
+            <input type="password" id="aesPassword" placeholder="Enter a strong password"
+                   class="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 ease-in-out text-gray-900">
+            <p class="text-sm text-gray-500 mt-2">You must remember this password — it is never stored.</p>
+        </div>
+
         <!-- Shift Value Input (Caesar specific) -->
-        <div id="shiftValueContainer" class="mb-8">
+        <div id="shiftValueContainer" class="mb-8" style="display: none;">
             <label for="shiftValue" class="block text-gray-700 text-lg font-semibold mb-2">Shift Value (0-25):</label>
             <input type="number" id="shiftValue" value="3" min="0" max="25"
                    class="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 ease-in-out text-gray-900 text-center text-xl font-bold">
         </div>
 
-        <!-- Custom Polybius Grid File Input (Custom Polybius specific) -->
+        <!-- Custom Polybius Grid File Input -->
         <div id="customPolybiusGridFileContainer" class="mb-8" style="display: none;">
             <label for="customPolybiusGridFile" class="block text-gray-700 text-lg font-semibold mb-2">Upload Custom Polybius Grid File (.csv):</label>
             <input type="file" id="customPolybiusGridFile" accept=".csv"
@@ -188,50 +173,21 @@
             </button>
         </div>
 
-        <!-- Output Download and Account Section -->
+        <!-- Output Download and Save Section -->
         <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4 mb-8">
             <button id="downloadOutputButton"
                     class="w-full sm:w-auto px-8 py-4 bg-purple-600 text-white font-bold text-lg rounded-xl shadow-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-75 transition duration-300 ease-in-out transform hover:scale-105"
                     style="display: none;">
                 Download Processed File
             </button>
-            <button id="saveToAccountButton"
+            <button id="saveToLocalButton"
                     class="w-full sm:w-auto px-8 py-4 bg-gray-600 text-white font-bold text-lg rounded-xl shadow-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-75 transition duration-300 ease-in-out transform hover:scale-105"
                     style="display: none;">
-                Save to Account
+                Save Locally
             </button>
         </div>
         <p id="messageDisplay" class="text-red-500 mt-4 text-center hidden"></p>
         <p id="saveMessageDisplay" class="text-blue-600 mt-4 text-center hidden"></p>
-    </div>
-
-    <!-- Sign In / Sign Up Modal -->
-    <div id="authModal" class="modal hidden">
-        <div class="modal-content">
-            <span class="close-button">&times;</span>
-            <h2 class="text-2xl font-bold text-gray-800 mb-4" id="authModalTitle">Sign In</h2>
-            <div class="mb-4">
-                <label for="authUsername" class="block text-gray-700 text-md font-semibold mb-2">Username (Email):</label>
-                <input type="email" id="authUsername"
-                       class="w-full p-3 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 text-gray-900"
-                       placeholder="Enter your email address">
-            </div>
-            <div class="mb-6">
-                <label for="authPassword" class="block text-gray-700 text-md font-semibold mb-2">Password:</label>
-                <input type="password" id="authPassword"
-                       class="w-full p-3 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 text-gray-900"
-                       placeholder="Enter your password">
-            </div>
-            <button id="authActionButton"
-                    class="w-full px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200">
-                Sign In
-            </button>
-            <button id="toggleAuthModeButton"
-                    class="w-full mt-4 px-6 py-3 bg-gray-300 text-gray-800 font-bold rounded-lg shadow-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 transition duration-200">
-                Switch to Sign Up
-            </button>
-            <p id="authModalMessage" class="text-red-500 text-sm mt-4 hidden"></p>
-        </div>
     </div>
 
     <!-- Save File Modal -->
@@ -239,26 +195,11 @@
         <div class="modal-content">
             <span class="close-button">&times;</span>
             <h2 class="text-2xl font-bold text-gray-800 mb-4">Save Processed File</h2>
-            <div class="mb-4">
+            <div class="mb-6">
                 <label for="saveFileName" class="block text-gray-700 text-md font-semibold mb-2">File Name:</label>
                 <input type="text" id="saveFileName"
                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 text-gray-900"
                        placeholder="Enter a name for your file">
-            </div>
-            <div class="mb-6">
-                <label class="block text-gray-700 text-md font-semibold mb-2">Save As:</label>
-                <div class="flex items-center space-x-4">
-                    <label class="inline-flex items-center">
-                        <input type="radio" name="saveType" value="private" checked
-                               class="form-radio text-blue-600 h-5 w-5">
-                        <span class="ml-2 text-gray-700">Private</span>
-                    </label>
-                    <label class="inline-flex items-center">
-                        <input type="radio" name="saveType" value="public"
-                               class="form-radio text-green-600 h-5 w-5">
-                        <span class="ml-2 text-gray-700">Public (Shareable)</span>
-                    </label>
-                </div>
             </div>
             <button id="confirmSaveButton"
                     class="w-full px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200">
@@ -272,9 +213,8 @@
     <div id="viewFilesModal" class="modal hidden">
         <div class="modal-content">
             <span class="close-button" id="closeViewFilesModal">&times;</span>
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">Your Saved Files</h2>
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Saved Files</h2>
             <div id="savedFilesList" class="mb-4">
-                <!-- Files will be loaded here -->
                 <p class="text-gray-500 text-center">No files saved yet.</p>
             </div>
             <p id="viewFilesMessage" class="text-red-500 text-sm mt-4 hidden"></p>
@@ -282,21 +222,14 @@
     </div>
 
     <script type="module">
-        const BACKEND_API_BASE_URL = 'https://cipher-backend-124648941917.europe-west1.run.app'; 
-
-        let userToken = localStorage.getItem('userToken');
-        let currentUserId = localStorage.getItem('currentUserId') || 'N/A';
-        let authMode = 'signIn';
-        let lastOperationType = null;
-
-        const authStatus = document.getElementById('authStatus');
-        const userIdDisplay = document.getElementById('userIdDisplay');
-        const signInSignUpButton = document.getElementById('signInSignUpButton');
-        const signOutButton = document.getElementById('signOutButton');
+        // ========================
+        // DOM Elements
+        // ========================
         const viewSavedFilesButton = document.getElementById('viewSavedFilesButton');
-        
         const inputFile = document.getElementById('inputFile');
         const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const aesPasswordInput = document.getElementById('aesPassword');
+        const aesPasswordContainer = document.getElementById('aesPasswordContainer');
         const shiftValueInput = document.getElementById('shiftValue');
         const shiftValueContainer = document.getElementById('shiftValueContainer');
         const customPolybiusGridFile = document.getElementById('customPolybiusGridFile');
@@ -306,23 +239,13 @@
         const encryptButton = document.getElementById('encryptButton');
         const decryptButton = document.getElementById('decryptButton');
         const downloadOutputButton = document.getElementById('downloadOutputButton');
-        const saveToAccountButton = document.getElementById('saveToAccountButton');
+        const saveToLocalButton = document.getElementById('saveToLocalButton');
         const messageDisplay = document.getElementById('messageDisplay');
         const saveMessageDisplay = document.getElementById('saveMessageDisplay');
         const cipherSelect = document.getElementById('cipherSelect');
 
-        const authModal = document.getElementById('authModal');
-        const authModalTitle = document.getElementById('authModalTitle');
-        const authUsernameInput = document.getElementById('authUsername');
-        const authPasswordInput = document.getElementById('authPassword');
-        const authActionButton = document.getElementById('authActionButton');
-        const toggleAuthModeButton = document.getElementById('toggleAuthModeButton');
-        const authModalMessage = document.getElementById('authModalMessage');
-
         const saveFileModal = document.getElementById('saveFileModal');
-        const saveFileModalCloseButton = saveFileModal.querySelector('.close-button');
         const saveFileNameInput = document.getElementById('saveFileName');
-        const saveTypeRadios = document.querySelectorAll('input[name="saveType"]');
         const confirmSaveButton = document.getElementById('confirmSaveButton');
         const modalMessage = document.getElementById('modalMessage');
 
@@ -331,10 +254,16 @@
         const savedFilesList = document.getElementById('savedFilesList');
         const viewFilesMessage = document.getElementById('viewFilesMessage');
 
+        // ========================
+        // State
+        // ========================
         let fileContent = '';
         let customGridFileContent = '';
         let outputContent = '';
-        let currentCipher = 'caesar';
+        let currentCipher = 'aes256';
+        let lastOperationType = null;
+        // For AES: store salt+ciphertext so we can save the encrypted bundle
+        let lastAesResult = null;
 
         const polybiusGridStandard = [
             ['A', 'B', 'C', 'D', 'E'],
@@ -343,26 +272,11 @@
             ['Q', 'R', 'S', 'T', 'U'],
             ['V', 'W', 'X', 'Y', 'Z']
         ];
-
         let customPolybiusGrid = [];
 
-        function updateAuthUI() {
-            if (userToken && currentUserId !== 'N/A') {
-                authStatus.textContent = `Signed in as: ${authUsernameInput.value || 'User'}`;
-                userIdDisplay.textContent = currentUserId;
-                signInSignUpButton.style.display = 'none';
-                signOutButton.style.display = 'inline-block';
-                viewSavedFilesButton.style.display = 'inline-block';
-            } else {
-                authStatus.textContent = 'Not signed in.';
-                userIdDisplay.textContent = 'N/A';
-                signInSignUpButton.style.display = 'inline-block';
-                signOutButton.style.display = 'none';
-                viewSavedFilesButton.style.display = 'none';
-                saveToAccountButton.style.display = 'none';
-            }
-        }
-
+        // ========================
+        // File Upload Handlers
+        // ========================
         inputFile.addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (file) {
@@ -377,8 +291,9 @@
                 fileContent = '';
             }
             downloadOutputButton.style.display = 'none';
-            saveToAccountButton.style.display = 'none';
+            saveToLocalButton.style.display = 'none';
             outputContent = '';
+            lastAesResult = null;
             saveMessageDisplay.classList.add('hidden');
             lastOperationType = null;
         });
@@ -413,12 +328,16 @@
                 customGridError.classList.add('hidden');
             }
             downloadOutputButton.style.display = 'none';
-            saveToAccountButton.style.display = 'none';
+            saveToLocalButton.style.display = 'none';
             outputContent = '';
+            lastAesResult = null;
             saveMessageDisplay.classList.add('hidden');
             lastOperationType = null;
         });
 
+        // ========================
+        // Classic Cipher Functions (client-side)
+        // ========================
         function caesarCipher(text, shift, encrypt = true) {
             let result = '';
             const actualShift = encrypt ? shift : -shift;
@@ -459,7 +378,7 @@
 
         function polybiusDecrypt(text, grid) {
             let result = '';
-            const cleanedText = text.replace(/[^0-9]/g, ''); 
+            const cleanedText = text.replace(/[^0-9]/g, '');
             if (cleanedText.length % 2 !== 0) {
                 messageDisplay.textContent = 'Polybius decryption requires an even number of digits for coordinates.';
                 messageDisplay.classList.remove('hidden');
@@ -492,39 +411,47 @@
             }
         }
 
+        // ========================
+        // Cipher Selection
+        // ========================
         cipherSelect.addEventListener('change', () => {
             currentCipher = cipherSelect.value;
+            aesPasswordContainer.style.display = 'none';
             shiftValueContainer.style.display = 'none';
             customPolybiusGridFileContainer.style.display = 'none';
             customGridError.classList.add('hidden');
 
-            if (currentCipher === 'caesar') {
+            if (currentCipher === 'aes256') {
+                aesPasswordContainer.style.display = 'block';
+            } else if (currentCipher === 'caesar') {
                 shiftValueContainer.style.display = 'block';
             } else if (currentCipher === 'custom-polybius') {
                 customPolybiusGridFileContainer.style.display = 'block';
             }
-            
+
             downloadOutputButton.style.display = 'none';
-            saveToAccountButton.style.display = 'none';
+            saveToLocalButton.style.display = 'none';
             outputContent = '';
+            lastAesResult = null;
             messageDisplay.classList.add('hidden');
             saveMessageDisplay.classList.add('hidden');
             lastOperationType = null;
         });
 
-        encryptButton.addEventListener('click', () => {
+        // ========================
+        // Encrypt
+        // ========================
+        encryptButton.addEventListener('click', async () => {
             if (!inputFile.files || inputFile.files.length === 0) {
                 messageDisplay.textContent = 'Please upload a CSV file first.';
                 messageDisplay.classList.remove('hidden');
                 downloadOutputButton.style.display = 'none';
-                saveToAccountButton.style.display = 'none';
+                saveToLocalButton.style.display = 'none';
                 return;
             }
             if (!fileContent) {
                 messageDisplay.textContent = 'File content not loaded yet. Please wait or re-upload.';
                 messageDisplay.classList.remove('hidden');
-                downloadOutputButton.style.display = 'none';
-                saveToAccountButton.style.display = 'none';
                 return;
             }
 
@@ -532,7 +459,35 @@
             customGridError.classList.add('hidden');
             saveMessageDisplay.classList.add('hidden');
 
-            if (currentCipher === 'caesar') {
+            if (currentCipher === 'aes256') {
+                const password = aesPasswordInput.value;
+                if (!password || password.length < 8) {
+                    messageDisplay.textContent = 'Password must be at least 8 characters.';
+                    messageDisplay.classList.remove('hidden');
+                    return;
+                }
+                try {
+                    const response = await fetch('/encrypt', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ content: fileContent, password })
+                    });
+                    const result = await response.json();
+                    if (response.ok) {
+                        lastAesResult = result.encrypted;
+                        // The downloadable output is a JSON bundle with salt + ciphertext
+                        outputContent = JSON.stringify(result.encrypted, null, 2);
+                    } else {
+                        messageDisplay.textContent = result.error || 'Encryption failed.';
+                        messageDisplay.classList.remove('hidden');
+                        return;
+                    }
+                } catch (error) {
+                    messageDisplay.textContent = `Server error: ${error.message}. Is the backend running?`;
+                    messageDisplay.classList.remove('hidden');
+                    return;
+                }
+            } else if (currentCipher === 'caesar') {
                 const shift = parseInt(shiftValueInput.value, 10);
                 if (isNaN(shift)) {
                     messageDisplay.textContent = 'Please enter a valid shift value for Caesar Cipher.';
@@ -545,34 +500,32 @@
             } else if (currentCipher === 'custom-polybius') {
                 if (!customGridFileContent || !isValidCustomPolybiusGrid(customGridFileContent)) {
                     customGridError.classList.remove('hidden');
-                    downloadOutputButton.style.display = 'none';
-                    saveToAccountButton.style.display = 'none';
                     return;
                 }
                 outputContent = polybiusEncrypt(fileContent, customPolybiusGrid);
             }
+
             if (outputContent) {
                 downloadOutputButton.style.display = 'block';
-                if (userToken) {
-                    saveToAccountButton.style.display = 'block';
-                }
+                saveToLocalButton.style.display = 'block';
                 lastOperationType = 'encrypted';
             }
         });
 
-        decryptButton.addEventListener('click', () => {
+        // ========================
+        // Decrypt
+        // ========================
+        decryptButton.addEventListener('click', async () => {
             if (!inputFile.files || inputFile.files.length === 0) {
-                messageDisplay.textContent = 'Please upload a CSV file first.';
+                messageDisplay.textContent = 'Please upload a file first.';
                 messageDisplay.classList.remove('hidden');
                 downloadOutputButton.style.display = 'none';
-                saveToAccountButton.style.display = 'none';
+                saveToLocalButton.style.display = 'none';
                 return;
             }
             if (!fileContent) {
                 messageDisplay.textContent = 'File content not loaded yet. Please wait or re-upload.';
                 messageDisplay.classList.remove('hidden');
-                downloadOutputButton.style.display = 'none';
-                saveToAccountButton.style.display = 'none';
                 return;
             }
 
@@ -580,7 +533,48 @@
             customGridError.classList.add('hidden');
             saveMessageDisplay.classList.add('hidden');
 
-            if (currentCipher === 'caesar') {
+            if (currentCipher === 'aes256') {
+                const password = aesPasswordInput.value;
+                if (!password) {
+                    messageDisplay.textContent = 'Please enter the decryption password.';
+                    messageDisplay.classList.remove('hidden');
+                    return;
+                }
+                // Parse the uploaded file as JSON containing salt + ciphertext
+                let parsed;
+                try {
+                    parsed = JSON.parse(fileContent);
+                } catch {
+                    messageDisplay.textContent = 'For AES-256 decryption, upload the encrypted JSON file produced by this tool.';
+                    messageDisplay.classList.remove('hidden');
+                    return;
+                }
+                if (!parsed.salt || !parsed.ciphertext) {
+                    messageDisplay.textContent = 'Invalid encrypted file. Expected JSON with "salt" and "ciphertext" fields.';
+                    messageDisplay.classList.remove('hidden');
+                    return;
+                }
+                try {
+                    const response = await fetch('/decrypt', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ salt: parsed.salt, ciphertext: parsed.ciphertext, password })
+                    });
+                    const result = await response.json();
+                    if (response.ok) {
+                        outputContent = result.decrypted;
+                        lastAesResult = null;
+                    } else {
+                        messageDisplay.textContent = result.error || 'Decryption failed.';
+                        messageDisplay.classList.remove('hidden');
+                        return;
+                    }
+                } catch (error) {
+                    messageDisplay.textContent = `Server error: ${error.message}. Is the backend running?`;
+                    messageDisplay.classList.remove('hidden');
+                    return;
+                }
+            } else if (currentCipher === 'caesar') {
                 const shift = parseInt(shiftValueInput.value, 10);
                 if (isNaN(shift)) {
                     messageDisplay.textContent = 'Please enter a valid shift value for Caesar Cipher.';
@@ -593,39 +587,41 @@
             } else if (currentCipher === 'custom-polybius') {
                 if (!customGridFileContent || !isValidCustomPolybiusGrid(customGridFileContent)) {
                     customGridError.classList.remove('hidden');
-                    downloadOutputButton.style.display = 'none';
-                    saveToAccountButton.style.display = 'none';
                     return;
                 }
                 outputContent = polybiusDecrypt(fileContent, customPolybiusGrid);
             }
-            
+
             if (outputContent) {
                 downloadOutputButton.style.display = 'block';
-                if (userToken) {
-                    saveToAccountButton.style.display = 'block';
-                }
+                saveToLocalButton.style.display = 'block';
                 lastOperationType = 'decrypted';
             }
         });
 
+        // ========================
+        // Download
+        // ========================
         downloadOutputButton.addEventListener('click', () => {
             if (!outputContent) {
                 messageDisplay.textContent = 'No content to download. Encrypt or decrypt first.';
                 messageDisplay.classList.remove('hidden');
                 return;
             }
-            if (!inputFile.files || inputFile.files.length === 0) {
-                messageDisplay.textContent = 'Original input file not found for naming. Please re-upload.';
-                messageDisplay.classList.remove('hidden');
-                return;
+
+            const originalFileName = inputFile.files[0]?.name || 'output';
+            const fileNameWithoutExtension = originalFileName.split('.').slice(0, -1).join('.') || originalFileName;
+
+            let newFileName, mimeType;
+            if (currentCipher === 'aes256' && lastOperationType === 'encrypted') {
+                newFileName = `${fileNameWithoutExtension}_encrypted.json`;
+                mimeType = 'application/json';
+            } else {
+                newFileName = `${fileNameWithoutExtension}_${lastOperationType || 'processed'}.csv`;
+                mimeType = 'text/csv';
             }
 
-            const originalFileName = inputFile.files[0].name;
-            const fileNameWithoutExtension = originalFileName.split('.').slice(0, -1).join('.');
-            const newFileName = `${fileNameWithoutExtension}_${lastOperationType || 'processed'}.csv`;
-
-            const blob = new Blob([outputContent], { type: 'text/csv' });
+            const blob = new Blob([outputContent], { type: mimeType });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -636,18 +632,16 @@
             URL.revokeObjectURL(url);
         });
 
-        saveToAccountButton.addEventListener('click', () => {
+        // ========================
+        // Save Locally
+        // ========================
+        saveToLocalButton.addEventListener('click', () => {
             if (!outputContent) {
                 messageDisplay.textContent = 'No content to save. Encrypt or decrypt a file first.';
                 messageDisplay.classList.remove('hidden');
                 return;
             }
-            if (!userToken) {
-                messageDisplay.textContent = 'Please sign in to save files.';
-                messageDisplay.classList.remove('hidden');
-                return;
-            }
-            saveFileNameInput.value = `${currentCipher}_processed_saved.csv`;
+            saveFileNameInput.value = `${currentCipher}_${lastOperationType || 'processed'}.csv`;
             modalMessage.classList.add('hidden');
             saveFileModal.classList.remove('hidden');
         });
@@ -655,22 +649,8 @@
         saveFileModal.querySelector('.close-button').addEventListener('click', () => {
             saveFileModal.classList.add('hidden');
         });
-        authModal.querySelector('.close-button').addEventListener('click', () => {
-            authModal.classList.add('hidden');
-            authModalMessage.classList.add('hidden');
-        });
-        closeViewFilesModalButton.addEventListener('click', () => {
-            viewFilesModal.classList.add('hidden');
-            viewFilesMessage.classList.add('hidden');
-        });
 
         confirmSaveButton.addEventListener('click', async () => {
-            if (!userToken) {
-                modalMessage.textContent = 'You must be signed in to save files.';
-                modalMessage.classList.remove('hidden');
-                return;
-            }
-
             const fileName = saveFileNameInput.value.trim();
             if (!fileName) {
                 modalMessage.textContent = 'Please enter a file name.';
@@ -678,147 +658,47 @@
                 return;
             }
 
-            const saveType = document.querySelector('input[name="saveType"]:checked').value;
-
             try {
-                const response = await fetch(`${BACKEND_API_BASE_URL}/save_file`, {
+                const response = await fetch('/save_file', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${userToken}`
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         fileName: fileName,
                         cipherType: currentCipher,
-                        content: outputContent,
-                        saveType: saveType
+                        content: outputContent
                     })
                 });
 
                 const result = await response.json();
-
                 if (response.ok) {
                     saveFileModal.classList.add('hidden');
-                    saveMessageDisplay.textContent = `File "${fileName}" saved successfully as ${saveType}.`;
+                    saveMessageDisplay.textContent = `File "${fileName}" saved locally.`;
                     saveMessageDisplay.classList.remove('hidden');
                 } else {
-                    console.error("Error saving file via API:", result.error);
-                    modalMessage.textContent = `Error saving file: ${result.error || 'Unknown error'}`;
+                    modalMessage.textContent = `Error: ${result.error || 'Unknown error'}`;
                     modalMessage.classList.remove('hidden');
                 }
             } catch (error) {
-                console.error("Network or API error saving file:", error);
-                modalMessage.textContent = `Network error. Is the backend server running and accessible at ${BACKEND_API_BASE_URL}? ${error.message}`;
+                modalMessage.textContent = `Server error: ${error.message}. Is the backend running?`;
                 modalMessage.classList.remove('hidden');
             }
         });
 
-        signInSignUpButton.addEventListener('click', () => {
-            authModal.classList.remove('hidden');
-            authModalMessage.classList.add('hidden');
-            authUsernameInput.value = '';
-            authPasswordInput.value = '';
-            authMode = 'signIn';
-            authModalTitle.textContent = 'Sign In';
-            authActionButton.textContent = 'Sign In';
-            toggleAuthModeButton.textContent = 'Switch to Sign Up';
-        });
-
-        toggleAuthModeButton.addEventListener('click', () => {
-            authModalMessage.classList.add('hidden');
-            if (authMode === 'signIn') {
-                authMode = 'signUp';
-                authModalTitle.textContent = 'Sign Up';
-                authActionButton.textContent = 'Sign Up';
-                toggleAuthModeButton.textContent = 'Switch to Sign In';
-            } else {
-                authMode = 'signIn';
-                authModalTitle.textContent = 'Sign In';
-                authActionButton.textContent = 'Sign In';
-                toggleAuthModeButton.textContent = 'Switch to Sign Up';
-            }
-        });
-
-        authActionButton.addEventListener('click', async () => {
-            const username = authUsernameInput.value.trim();
-            const password = authPasswordInput.value.trim();
-            authModalMessage.classList.add('hidden');
-
-            if (!username || !password) {
-                authModalMessage.textContent = 'Please enter both username (email) and password.';
-                authModalMessage.classList.remove('hidden');
-                return;
-            }
-
-            try {
-                let response;
-                if (authMode === 'signUp') {
-                    response = await fetch(`${BACKEND_API_BASE_URL}/register`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ username, password })
-                    });
-                } else {
-                    response = await fetch(`${BACKEND_API_BASE_URL}/login`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ username, password })
-                    });
-                }
-
-                const result = await response.json();
-
-                if (response.ok) {
-                    userToken = result.token;
-                    currentUserId = result.user_id;
-                    localStorage.setItem('userToken', userToken);
-                    localStorage.setItem('currentUserId', currentUserId);
-                    authModalMessage.textContent = `${authMode === 'signUp' ? 'Registration' : 'Sign in'} successful!`;
-                    authModalMessage.classList.remove('hidden');
-                    authModal.classList.add('hidden');
-                    updateAuthUI();
-                } else {
-                    authModalMessage.textContent = result.error || 'Authentication failed. Please try again.';
-                    authModalMessage.classList.remove('hidden');
-                }
-            } catch (error) {
-                console.error("Auth API error:", error);
-                authModalMessage.textContent = `Network error. Is the backend server running and accessible at ${BACKEND_API_BASE_URL}? ${error.message}`;
-                authModalMessage.classList.remove('hidden');
-            }
-        });
-
-        signOutButton.addEventListener('click', () => {
-            userToken = null;
-            currentUserId = 'N/A';
-            localStorage.removeItem('userToken');
-            localStorage.removeItem('currentUserId');
-            saveMessageDisplay.textContent = 'Successfully signed out.';
-            saveMessageDisplay.classList.remove('hidden');
-            outputContent = '';
-            downloadOutputButton.style.display = 'none';
-            saveToAccountButton.style.display = 'none';
-            updateAuthUI();
+        // ========================
+        // View Saved Files
+        // ========================
+        closeViewFilesModalButton.addEventListener('click', () => {
+            viewFilesModal.classList.add('hidden');
+            viewFilesMessage.classList.add('hidden');
         });
 
         viewSavedFilesButton.addEventListener('click', async () => {
-            if (!userToken) {
-                viewFilesMessage.textContent = 'Please sign in to view saved files.';
-                viewFilesMessage.classList.remove('hidden');
-                return;
-            }
             viewFilesModal.classList.remove('hidden');
             savedFilesList.innerHTML = '<p class="text-gray-500 text-center">Loading files...</p>';
             viewFilesMessage.classList.add('hidden');
 
             try {
-                const response = await fetch(`${BACKEND_API_BASE_URL}/get_files`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${userToken}`
-                    }
-                });
-
+                const response = await fetch('/get_files');
                 const result = await response.json();
 
                 if (response.ok) {
@@ -827,17 +707,15 @@
                         savedFilesList.innerHTML = '<p class="text-gray-500 text-center">No files saved yet.</p>';
                     } else {
                         savedFilesList.innerHTML = '';
-                        files.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
                         files.forEach(file => {
                             const fileItem = document.createElement('div');
                             fileItem.className = 'file-item';
                             fileItem.innerHTML = `
                                 <div class="file-item-name">
-                                    ${file.file_name} (${file.cipher_type}) - <span class="text-xs text-gray-400">${new Date(file.timestamp).toLocaleString()} (${file.save_type})</span>
+                                    ${file.file_name} (${file.cipher_type}) — <span class="text-xs text-gray-400">${new Date(file.timestamp).toLocaleString()}</span>
                                 </div>
                                 <div class="file-item-actions">
-                                    <button class="view-btn" data-id="${file.id}" data-content="${encodeURIComponent(file.content)}">View</button>
+                                    <button class="view-btn" data-id="${file.id}" data-content="${encodeURIComponent(file.content)}">Download</button>
                                     <button class="delete-btn" data-id="${file.id}">Delete</button>
                                 </div>
                             `;
@@ -847,10 +725,15 @@
                         savedFilesList.querySelectorAll('.view-btn').forEach(button => {
                             button.addEventListener('click', (e) => {
                                 const content = decodeURIComponent(e.target.dataset.content);
-                                messageDisplay.textContent = `File Content: (See Console for full text) ${content.substring(0, 100)}...`;
-                                messageDisplay.classList.remove('hidden');
-                                console.log("Viewed File Content:", content);
-                                viewFilesModal.classList.add('hidden');
+                                const blob = new Blob([content], { type: 'text/plain' });
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = 'saved_file.csv';
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                                URL.revokeObjectURL(url);
                             });
                         });
 
@@ -858,49 +741,36 @@
                             button.addEventListener('click', async (e) => {
                                 const fileIdToDelete = e.target.dataset.id;
                                 try {
-                                    const deleteResponse = await fetch(`${BACKEND_API_BASE_URL}/delete_file/${fileIdToDelete}`, {
-                                        method: 'DELETE',
-                                        headers: {
-                                            'Authorization': `Bearer ${userToken}`
-                                        }
-                                    });
-
+                                    const deleteResponse = await fetch(`/delete_file/${fileIdToDelete}`, { method: 'DELETE' });
                                     const deleteResult = await deleteResponse.json();
-
                                     if (deleteResponse.ok) {
-                                        viewFilesMessage.textContent = `File deleted successfully.`;
+                                        viewFilesMessage.textContent = 'File deleted.';
                                         viewFilesMessage.classList.remove('hidden');
                                         viewSavedFilesButton.click();
                                     } else {
-                                        console.error("Error deleting file via API:", deleteResult.error);
-                                        viewFilesMessage.textContent = `Error deleting file: ${deleteResult.error || 'Unknown error'}`;
+                                        viewFilesMessage.textContent = `Error: ${deleteResult.error || 'Unknown error'}`;
                                         viewFilesMessage.classList.remove('hidden');
                                     }
                                 } catch (error) {
-                                    console.error("Network or API error deleting file:", error);
-                                    viewFilesMessage.textContent = `Network error. Is the backend server running and accessible at ${BACKEND_API_BASE_URL}? ${error.message}`;
+                                    viewFilesMessage.textContent = `Server error: ${error.message}`;
                                     viewFilesMessage.classList.remove('hidden');
                                 }
                             });
                         });
                     }
                 } else {
-                    console.error("Error fetching files via API:", result.error);
-                    viewFilesMessage.textContent = `Error loading files: ${result.error || 'Unknown error'}`;
-                    viewFilesMessage.classList.remove('hidden');
                     savedFilesList.innerHTML = '<p class="text-red-500 text-center">Failed to load files.</p>';
                 }
             } catch (error) {
-                console.error("Network or API error fetching files:", error);
-                viewFilesMessage.textContent = `Network error. Is the backend server running and accessible at ${BACKEND_API_BASE_URL}? ${error.message}`;
-                viewFilesMessage.classList.remove('hidden');
-                savedFilesList.innerHTML = '<p class="text-red-500 text-center">Failed to load files.</p>';
+                savedFilesList.innerHTML = '<p class="text-red-500 text-center">Failed to load files. Is the backend running?</p>';
             }
         });
 
+        // ========================
+        // Init
+        // ========================
         document.addEventListener('DOMContentLoaded', () => {
             cipherSelect.dispatchEvent(new Event('change'));
-            updateAuthUI();
         });
     </script>
 </body>
