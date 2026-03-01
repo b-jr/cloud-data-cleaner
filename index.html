@@ -257,6 +257,14 @@
                             <span class="text-gray-700 font-medium">IP Address</span>
                             <span class="text-xs text-gray-400">192.168.1.1</span>
                         </label>
+                        <label class="flex items-center gap-2 cursor-pointer col-span-2 sm:col-span-3 border-t border-gray-100 pt-3 mt-1">
+                            <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="spacy_ner">
+                            <div>
+                                <span class="text-gray-700 font-medium">Names (NER)</span>
+                                <span class="text-xs text-gray-400 ml-1">— detects person names anywhere in the document using AI</span>
+                                <br><span class="text-xs text-orange-500">May produce false positives. Use the custom name list below for known subjects.</span>
+                            </div>
+                        </label>
                     </div>
                 </div>
 
@@ -358,6 +366,15 @@
                         class="px-4 py-2 bg-gray-100 text-gray-700 font-semibold rounded-lg border border-gray-300 hover:bg-gray-200 transition duration-200 text-sm">
                     + Add Pattern
                 </button>
+            </div>
+
+            <!-- Names to Redact -->
+            <div class="mb-6">
+                <p class="block text-gray-700 text-lg font-semibold mb-1">Names to Always Redact:</p>
+                <p class="text-xs text-gray-400 mb-2">One name per line. These are matched exactly (case-insensitive, whole word) regardless of other pattern settings. Use this for known subjects — zero false positives.</p>
+                <textarea id="namesInput" rows="3"
+                          class="w-full p-3 border border-gray-300 rounded-lg text-sm text-gray-700 focus:ring-1 focus:ring-orange-400"
+                          placeholder="e.g.&#10;John Smith&#10;Jane Doe"></textarea>
             </div>
 
             <!-- Do-Not-Redact Allowlist -->
@@ -996,6 +1013,7 @@
         const redactButton = document.getElementById('redactButton');
         const redactStatus = document.getElementById('redactStatus');
         const allowlistInput = document.getElementById('allowlistInput');
+        const namesInput = document.getElementById('namesInput');
 
         // Pattern group toggles
         document.querySelectorAll('.pattern-group-toggle').forEach(btn => {
@@ -1052,10 +1070,14 @@
             const allowlist = (allowlistInput.value || '')
                 .split('\n').map(s => s.trim()).filter(s => s.length > 0);
 
+            const names = (namesInput.value || '')
+                .split('\n').map(s => s.trim()).filter(s => s.length > 0);
+
             const formData = new FormData();
             formData.append('file', redactFileInput.files[0]);
             formData.append('patterns', JSON.stringify(patterns));
             formData.append('allowlist', JSON.stringify(allowlist));
+            formData.append('names', JSON.stringify(names));
 
             try {
                 const response = await fetch('/redact', { method: 'POST', body: formData });

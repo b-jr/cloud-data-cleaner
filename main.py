@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 import fitz  # PyMuPDF
+import spacy
 from docx import Document
 from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
@@ -358,13 +359,49 @@ def _normalize(value: str) -> str:
     return re.sub(r'[\s\-]+', '', value).upper()
 
 
+# ---------- spaCy NER ----------
+
+_nlp = None  # lazy-loaded on first use
+
+
+def _get_nlp():
+    global _nlp
+    if _nlp is None:
+        _nlp = spacy.load("en_core_web_sm")
+    return _nlp
+
+
+def _spacy_persons(text: str, allowlist: set[str]) -> set[str]:
+    """Return the set of PERSON entity strings found by spaCy NER."""
+    nlp = _get_nlp()
+    doc = nlp(text)
+    found = set()
+    for ent in doc.ents:
+        if ent.label_ == "PERSON":
+            name = ent.text.strip()
+            if name and _normalize(name) not in allowlist:
+                found.add(name)
+    return found
+
+
 # ---------- Rule compilation ----------
 
-def _build_rules(selected: list[dict]) -> list[RedactRule]:
+def _build_rules(selected: list[dict], names: list[str]) -> tuple[list[RedactRule], bool]:
+    """Compile selected patterns into RedactRules.
+
+    Returns (rules, use_spacy). spacy_ner is pulled out of the list and
+    signalled via the boolean rather than being represented as a RedactRule,
+    because NER works at document/paragraph level rather than per-pattern.
+    Custom names are compiled into word-boundary exact-match rules.
+    """
     rules = []
+    use_spacy = False
+
     for p in selected:
         ptype = p.get("type", "")
-        if ptype in REDACT_PATTERNS:
+        if ptype == "spacy_ner":
+            use_spacy = True
+        elif ptype in REDACT_PATTERNS:
             rules.append(RedactRule(
                 name=ptype,
                 pattern=re.compile(REDACT_PATTERNS[ptype], re.IGNORECASE),
@@ -391,7 +428,18 @@ def _build_rules(selected: list[dict]) -> list[RedactRule]:
                     ))
                 except re.error as e:
                     raise ValueError(f"Invalid regex '{raw}': {e}")
-    return rules
+
+    for name in names:
+        name = name.strip()
+        if name:
+            rules.append(RedactRule(
+                name=f"name:{name}",
+                pattern=re.compile(r'\b' + re.escape(name) + r'\b', re.IGNORECASE),
+                validator=None,
+                value_group=0,
+            ))
+
+    return rules, use_spacy
 
 
 # ---------- Redaction helpers ----------
@@ -419,11 +467,14 @@ def _make_run_replacer(rule: RedactRule, allowlist: set[str]):
     return replacer
 
 
-def _redact_pdf(file_bytes: bytes, rules: list[RedactRule], allowlist: set[str]) -> io.BytesIO:
+def _redact_pdf(file_bytes: bytes, rules: list[RedactRule], allowlist: set[str],
+                use_spacy: bool = False) -> io.BytesIO:
     doc = fitz.open(stream=file_bytes, filetype="pdf")
     for page in doc:
         text = page.get_text()
         to_redact: set[str] = set()
+
+        # Pattern-based matches
         for rule in rules:
             for m in rule.pattern.finditer(text):
                 try:
@@ -437,6 +488,11 @@ def _redact_pdf(file_bytes: bytes, rules: list[RedactRule], allowlist: set[str])
                 if rule.validator and not rule.validator(candidate):
                     continue
                 to_redact.add(candidate)
+
+        # spaCy PERSON entities
+        if use_spacy:
+            to_redact.update(_spacy_persons(text, allowlist))
+
         for s in to_redact:
             for rect in page.search_for(s):
                 page.add_redact_annot(rect, fill=(0, 0, 0))
@@ -453,13 +509,27 @@ def _redact_text_in_run(run_text: str, rules: list[RedactRule], allowlist: set[s
     return run_text
 
 
-def _redact_docx(file_bytes: bytes, rules: list[RedactRule], allowlist: set[str]) -> io.BytesIO:
+def _redact_docx(file_bytes: bytes, rules: list[RedactRule], allowlist: set[str],
+                 use_spacy: bool = False) -> io.BytesIO:
     doc = Document(io.BytesIO(file_bytes))
 
     def redact_paragraphs(paragraphs):
         for para in paragraphs:
+            # spaCy: run NER on full paragraph text for cross-run context,
+            # then compile found names into a combined pattern applied to each run.
+            extra_pattern = None
+            if use_spacy:
+                para_text = "".join(run.text for run in para.runs)
+                names = _spacy_persons(para_text, allowlist)
+                if names:
+                    extra_pattern = re.compile(
+                        "|".join(r"\b" + re.escape(n) + r"\b" for n in names),
+                        re.IGNORECASE,
+                    )
             for run in para.runs:
                 run.text = _redact_text_in_run(run.text, rules, allowlist)
+                if extra_pattern:
+                    run.text = extra_pattern.sub("[REDACTED]", run.text)
 
     redact_paragraphs(doc.paragraphs)
     for table in doc.tables:
@@ -496,14 +566,20 @@ def redact():
     except json.JSONDecodeError:
         return jsonify({"error": "Invalid allowlist JSON"}), 400
 
+    try:
+        names_raw = json.loads(request.form.get("names", "[]"))
+    except json.JSONDecodeError:
+        return jsonify({"error": "Invalid names JSON"}), 400
+
     allowlist = {_normalize(s) for s in allowlist_raw if isinstance(s, str) and s.strip()}
+    names = [s for s in names_raw if isinstance(s, str) and s.strip()]
 
     try:
-        rules = _build_rules(selected)
+        rules, use_spacy = _build_rules(selected, names)
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    if not rules:
+    if not rules and not use_spacy:
         return jsonify({"error": "No valid patterns selected"}), 400
 
     file_bytes = uploaded.read()
@@ -511,10 +587,10 @@ def redact():
 
     try:
         if ext == ".pdf":
-            result = _redact_pdf(file_bytes, rules, allowlist)
+            result = _redact_pdf(file_bytes, rules, allowlist, use_spacy)
             mime = "application/pdf"
         else:
-            result = _redact_docx(file_bytes, rules, allowlist)
+            result = _redact_docx(file_bytes, rules, allowlist, use_spacy)
             mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     except Exception as e:
         return jsonify({"error": f"Redaction failed: {e}"}), 500
