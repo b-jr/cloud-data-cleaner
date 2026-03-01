@@ -106,8 +106,25 @@
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
     <div class="container bg-white p-8 rounded-xl shadow-lg border border-gray-200">
-        <h1 class="text-4xl font-extrabold text-center text-gray-800 mb-2">Cipher Tool</h1>
-        <p class="text-center text-gray-500 text-sm mb-8">Local mode — your data never leaves this machine</p>
+        <h1 class="text-4xl font-extrabold text-center text-gray-800 mb-2">Data Cleaner</h1>
+        <p class="text-center text-gray-500 text-sm mb-6">Local mode — your data never leaves this machine</p>
+
+        <!-- Tab Navigation -->
+        <div class="flex border-b border-gray-200 mb-8">
+            <button id="tabCipher"
+                    class="tab-btn px-6 py-3 font-semibold text-blue-600 border-b-2 border-blue-600 focus:outline-none">
+                Cipher Tool
+            </button>
+            <button id="tabRedact"
+                    class="tab-btn px-6 py-3 font-semibold text-gray-500 border-b-2 border-transparent hover:text-gray-700 focus:outline-none">
+                Redact Documents
+            </button>
+        </div>
+
+        <!-- ======================== -->
+        <!-- CIPHER TOOL PANEL       -->
+        <!-- ======================== -->
+        <div id="panelCipher">
 
         <!-- View Saved Files Button -->
         <div class="flex justify-center mb-8">
@@ -188,6 +205,80 @@
         </div>
         <p id="messageDisplay" class="text-red-500 mt-4 text-center hidden"></p>
         <p id="saveMessageDisplay" class="text-blue-600 mt-4 text-center hidden"></p>
+
+        </div><!-- end #panelCipher -->
+
+        <!-- ======================== -->
+        <!-- REDACT DOCUMENTS PANEL  -->
+        <!-- ======================== -->
+        <div id="panelRedact" class="hidden">
+
+            <!-- File Upload -->
+            <div class="mb-6">
+                <label class="block text-gray-700 text-lg font-semibold mb-2">Upload Document (.pdf or .docx):</label>
+                <input type="file" id="redactFile" accept=".pdf,.docx"
+                       class="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-transparent text-gray-900">
+                <p id="redactFileName" class="text-sm text-gray-500 mt-2"></p>
+            </div>
+
+            <!-- Built-in Patterns -->
+            <div class="mb-6">
+                <p class="block text-gray-700 text-lg font-semibold mb-3">Patterns to Redact:</p>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="ssn">
+                        <span class="text-gray-700 font-medium">SSN</span>
+                        <span class="text-xs text-gray-400">123-45-6789</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="email">
+                        <span class="text-gray-700 font-medium">Email</span>
+                        <span class="text-xs text-gray-400">user@example.com</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="phone">
+                        <span class="text-gray-700 font-medium">Phone</span>
+                        <span class="text-xs text-gray-400">555-867-5309</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="credit_card">
+                        <span class="text-gray-700 font-medium">Credit Card</span>
+                        <span class="text-xs text-gray-400">4111 1111 1111 1111</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="ip_address">
+                        <span class="text-gray-700 font-medium">IP Address</span>
+                        <span class="text-xs text-gray-400">192.168.1.1</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="date">
+                        <span class="text-gray-700 font-medium">Date</span>
+                        <span class="text-xs text-gray-400">MM/DD/YYYY</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Custom Patterns -->
+            <div class="mb-6">
+                <p class="block text-gray-700 text-lg font-semibold mb-2">Custom Regex Patterns:</p>
+                <div id="customPatternList" class="space-y-2 mb-3"></div>
+                <button id="addCustomPatternBtn"
+                        class="px-4 py-2 bg-gray-100 text-gray-700 font-semibold rounded-lg border border-gray-300 hover:bg-gray-200 transition duration-200 text-sm">
+                    + Add Pattern
+                </button>
+            </div>
+
+            <!-- Redact Button -->
+            <div class="flex justify-center mb-6">
+                <button id="redactButton"
+                        class="px-10 py-4 bg-orange-500 text-white font-bold text-lg rounded-xl shadow-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 transition duration-300 transform hover:scale-105">
+                    Redact &amp; Download
+                </button>
+            </div>
+
+            <p id="redactStatus" class="text-center text-sm mt-2 hidden"></p>
+
+        </div><!-- end #panelRedact -->
     </div>
 
     <!-- Save File Modal -->
@@ -765,6 +856,130 @@
                 savedFilesList.innerHTML = '<p class="text-red-500 text-center">Failed to load files. Is the backend running?</p>';
             }
         });
+
+        // ========================
+        // Tab Switching
+        // ========================
+        const tabCipher = document.getElementById('tabCipher');
+        const tabRedact = document.getElementById('tabRedact');
+        const panelCipher = document.getElementById('panelCipher');
+        const panelRedact = document.getElementById('panelRedact');
+
+        function activateTab(tab) {
+            if (tab === 'cipher') {
+                panelCipher.classList.remove('hidden');
+                panelRedact.classList.add('hidden');
+                tabCipher.classList.add('text-blue-600', 'border-blue-600');
+                tabCipher.classList.remove('text-gray-500', 'border-transparent');
+                tabRedact.classList.add('text-gray-500', 'border-transparent');
+                tabRedact.classList.remove('text-orange-500', 'border-orange-500');
+            } else {
+                panelCipher.classList.add('hidden');
+                panelRedact.classList.remove('hidden');
+                tabRedact.classList.add('text-orange-500', 'border-orange-500');
+                tabRedact.classList.remove('text-gray-500', 'border-transparent');
+                tabCipher.classList.add('text-gray-500', 'border-transparent');
+                tabCipher.classList.remove('text-blue-600', 'border-blue-600');
+            }
+        }
+        tabCipher.addEventListener('click', () => activateTab('cipher'));
+        tabRedact.addEventListener('click', () => activateTab('redact'));
+
+        // ========================
+        // Redact Panel Logic
+        // ========================
+        const redactFileInput = document.getElementById('redactFile');
+        const redactFileName = document.getElementById('redactFileName');
+        const addCustomPatternBtn = document.getElementById('addCustomPatternBtn');
+        const customPatternList = document.getElementById('customPatternList');
+        const redactButton = document.getElementById('redactButton');
+        const redactStatus = document.getElementById('redactStatus');
+
+        redactFileInput.addEventListener('change', () => {
+            const f = redactFileInput.files[0];
+            redactFileName.textContent = f ? `Selected: ${f.name}` : '';
+            redactStatus.classList.add('hidden');
+        });
+
+        addCustomPatternBtn.addEventListener('click', () => {
+            const row = document.createElement('div');
+            row.className = 'flex items-center gap-2';
+            row.innerHTML = `
+                <input type="text" placeholder="e.g. \\bMR\\. [A-Z][a-z]+"
+                       class="custom-pattern-input flex-1 p-2 border border-gray-300 rounded-lg text-sm focus:ring-1 focus:ring-orange-400 text-gray-900">
+                <button class="remove-pattern-btn px-3 py-2 bg-red-100 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-200 transition">✕</button>
+            `;
+            row.querySelector('.remove-pattern-btn').addEventListener('click', () => row.remove());
+            customPatternList.appendChild(row);
+        });
+
+        redactButton.addEventListener('click', async () => {
+            redactStatus.classList.add('hidden');
+
+            if (!redactFileInput.files || redactFileInput.files.length === 0) {
+                showRedactStatus('Please upload a PDF or DOCX file first.', 'error');
+                return;
+            }
+
+            const patterns = [];
+            document.querySelectorAll('.redact-pattern-cb:checked').forEach(cb => {
+                patterns.push({ type: cb.value });
+            });
+            document.querySelectorAll('.custom-pattern-input').forEach(input => {
+                const val = input.value.trim();
+                if (val) patterns.push({ type: 'custom', pattern: val });
+            });
+
+            if (patterns.length === 0) {
+                showRedactStatus('Select at least one pattern to redact.', 'error');
+                return;
+            }
+
+            redactButton.disabled = true;
+            redactButton.textContent = 'Redacting…';
+            showRedactStatus('Processing — this may take a moment for large files…', 'info');
+
+            const formData = new FormData();
+            formData.append('file', redactFileInput.files[0]);
+            formData.append('patterns', JSON.stringify(patterns));
+
+            try {
+                const response = await fetch('/redact', { method: 'POST', body: formData });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const disposition = response.headers.get('Content-Disposition') || '';
+                    const nameMatch = disposition.match(/filename="?([^"]+)"?/);
+                    const downloadName = nameMatch ? nameMatch[1] : `redacted_${redactFileInput.files[0].name}`;
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = downloadName;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showRedactStatus('Redacted file downloaded successfully.', 'success');
+                } else {
+                    const result = await response.json();
+                    showRedactStatus(result.error || 'Redaction failed.', 'error');
+                }
+            } catch (err) {
+                showRedactStatus(`Server error: ${err.message}. Is the backend running?`, 'error');
+            } finally {
+                redactButton.disabled = false;
+                redactButton.textContent = 'Redact & Download';
+            }
+        });
+
+        function showRedactStatus(msg, type) {
+            redactStatus.textContent = msg;
+            redactStatus.className = 'text-center text-sm mt-2';
+            if (type === 'error') redactStatus.classList.add('text-red-500');
+            else if (type === 'success') redactStatus.classList.add('text-green-600');
+            else redactStatus.classList.add('text-blue-500');
+            redactStatus.classList.remove('hidden');
+        }
 
         // ========================
         // Init

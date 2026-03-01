@@ -1,12 +1,16 @@
 # main.py
+import io
 import os
+import re
 import json
 import uuid
 import base64
 import datetime
 from pathlib import Path
 
-from flask import Flask, request, jsonify, send_from_directory
+import fitz  # PyMuPDF
+from docx import Document
+from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes
@@ -205,6 +209,115 @@ def delete_file(file_id):
 
     file_path.unlink()
     return jsonify({"message": "File deleted successfully"}), 200
+
+
+# ========================
+# Redaction
+# ========================
+
+REDACT_PATTERNS = {
+    "ssn":         r'\b\d{3}-\d{2}-\d{4}\b',
+    "email":       r'\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b',
+    "phone":       r'\b(\+1[\s.\-]?)?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}\b',
+    "credit_card": r'\b(?:\d{4}[\s\-]?){3}\d{4}\b',
+    "ip_address":  r'\b(?:\d{1,3}\.){3}\d{1,3}\b',
+    "date":        r'\b\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4}\b',
+}
+
+
+def _redact_pdf(file_bytes: bytes, compiled_patterns: list) -> io.BytesIO:
+    doc = fitz.open(stream=file_bytes, filetype="pdf")
+    for page in doc:
+        text = page.get_text()
+        matched_strings = set()
+        for pattern in compiled_patterns:
+            for m in pattern.finditer(text):
+                matched_strings.add(m.group())
+        for s in matched_strings:
+            for rect in page.search_for(s):
+                page.add_redact_annot(rect, fill=(0, 0, 0))
+        page.apply_redactions(images=fitz.PDF_REDACT_IMAGE_NONE)
+    buf = io.BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+    return buf
+
+
+def _redact_text_in_run(run_text: str, compiled_patterns: list) -> str:
+    for pattern in compiled_patterns:
+        run_text = pattern.sub("[REDACTED]", run_text)
+    return run_text
+
+
+def _redact_docx(file_bytes: bytes, compiled_patterns: list) -> io.BytesIO:
+    doc = Document(io.BytesIO(file_bytes))
+
+    def redact_paragraphs(paragraphs):
+        for para in paragraphs:
+            for run in para.runs:
+                run.text = _redact_text_in_run(run.text, compiled_patterns)
+
+    redact_paragraphs(doc.paragraphs)
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                redact_paragraphs(cell.paragraphs)
+
+    buf = io.BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+    return buf
+
+
+@app.route("/redact", methods=["POST"])
+def redact():
+    """Redact sensitive patterns from PDF or DOCX files."""
+    if "file" not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+
+    uploaded = request.files["file"]
+    filename = uploaded.filename or "document"
+    ext = Path(filename).suffix.lower()
+
+    if ext not in (".pdf", ".docx"):
+        return jsonify({"error": f"Unsupported file type '{ext}'. Supported: .pdf, .docx"}), 400
+
+    patterns_json = request.form.get("patterns", "[]")
+    try:
+        selected = json.loads(patterns_json)
+    except json.JSONDecodeError:
+        return jsonify({"error": "Invalid patterns JSON"}), 400
+
+    compiled = []
+    for p in selected:
+        ptype = p.get("type", "")
+        if ptype in REDACT_PATTERNS:
+            compiled.append(re.compile(REDACT_PATTERNS[ptype], re.IGNORECASE))
+        elif ptype == "custom":
+            raw = p.get("pattern", "").strip()
+            if raw:
+                try:
+                    compiled.append(re.compile(raw))
+                except re.error as e:
+                    return jsonify({"error": f"Invalid regex '{raw}': {e}"}), 400
+
+    if not compiled:
+        return jsonify({"error": "No valid patterns selected"}), 400
+
+    file_bytes = uploaded.read()
+    redacted_name = f"redacted_{filename}"
+
+    try:
+        if ext == ".pdf":
+            result = _redact_pdf(file_bytes, compiled)
+            mime = "application/pdf"
+        else:
+            result = _redact_docx(file_bytes, compiled)
+            mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    except Exception as e:
+        return jsonify({"error": f"Redaction failed: {e}"}), 500
+
+    return send_file(result, mimetype=mime, as_attachment=True, download_name=redacted_name)
 
 
 if __name__ == "__main__":
