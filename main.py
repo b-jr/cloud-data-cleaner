@@ -402,9 +402,12 @@ def _build_rules(selected: list[dict], names: list[str]) -> tuple[list[RedactRul
         if ptype == "spacy_ner":
             use_spacy = True
         elif ptype in REDACT_PATTERNS:
+            # SWIFT/BIC codes are uppercase by spec; skip IGNORECASE to avoid
+            # false positives on common English words (e.g. "Referred", "redacted").
+            flags = 0 if ptype == "swift_bic" else re.IGNORECASE
             rules.append(RedactRule(
                 name=ptype,
-                pattern=re.compile(REDACT_PATTERNS[ptype], re.IGNORECASE),
+                pattern=re.compile(REDACT_PATTERNS[ptype], flags),
                 validator=PATTERN_VALIDATORS.get(ptype),
                 value_group=0,
             ))
@@ -444,9 +447,19 @@ def _build_rules(selected: list[dict], names: list[str]) -> tuple[list[RedactRul
 
 # ---------- Redaction helpers ----------
 
-def _make_run_replacer(rule: RedactRule, allowlist: set[str]):
-    """Return a re.sub callable that respects the rule's value_group and allowlist."""
+def _make_run_replacer(rule: RedactRule, allowlist: set[str], pre_text: str):
+    """Return a re.sub callable for one rule pass.
+
+    pre_text is the run text *before* this rule's substitution — match
+    positions align with it, so we can check surrounding characters to
+    detect spans that an earlier rule already marked as [REDACTED].
+    """
     def replacer(m: re.Match) -> str:
+        # If this match sits immediately inside a prior [REDACTED] marker
+        # (character before is '[' and character after is ']'), skip it.
+        s, e = m.start(), m.end()
+        if s > 0 and e < len(pre_text) and pre_text[s - 1] == "[" and pre_text[e] == "]":
+            return m.group(0)
         try:
             candidate = m.group(rule.value_group)
         except IndexError:
@@ -505,7 +518,8 @@ def _redact_pdf(file_bytes: bytes, rules: list[RedactRule], allowlist: set[str],
 
 def _redact_text_in_run(run_text: str, rules: list[RedactRule], allowlist: set[str]) -> str:
     for rule in rules:
-        run_text = rule.pattern.sub(_make_run_replacer(rule, allowlist), run_text)
+        pre = run_text  # snapshot before this rule modifies the text
+        run_text = rule.pattern.sub(_make_run_replacer(rule, allowlist, pre), pre)
     return run_text
 
 
