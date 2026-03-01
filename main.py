@@ -225,14 +225,37 @@ REDACT_PATTERNS = {
 }
 
 
+def _luhn_check(value: str) -> bool:
+    """Return True if the digits in value pass the Luhn checksum."""
+    digits = [int(c) for c in value if c.isdigit()]
+    if len(digits) < 13:
+        return False
+    total = 0
+    for i, d in enumerate(reversed(digits)):
+        if i % 2 == 1:
+            d *= 2
+            if d > 9:
+                d -= 9
+        total += d
+    return total % 10 == 0
+
+
+# Maps pattern type -> post-match validator (None means accept all matches).
+PATTERN_VALIDATORS = {
+    "credit_card": _luhn_check,
+}
+
+
 def _redact_pdf(file_bytes: bytes, compiled_patterns: list) -> io.BytesIO:
+    """compiled_patterns: list of (re.Pattern, validator | None)"""
     doc = fitz.open(stream=file_bytes, filetype="pdf")
     for page in doc:
         text = page.get_text()
         matched_strings = set()
-        for pattern in compiled_patterns:
+        for pattern, validator in compiled_patterns:
             for m in pattern.finditer(text):
-                matched_strings.add(m.group())
+                if validator is None or validator(m.group()):
+                    matched_strings.add(m.group())
         for s in matched_strings:
             for rect in page.search_for(s):
                 page.add_redact_annot(rect, fill=(0, 0, 0))
@@ -244,8 +267,15 @@ def _redact_pdf(file_bytes: bytes, compiled_patterns: list) -> io.BytesIO:
 
 
 def _redact_text_in_run(run_text: str, compiled_patterns: list) -> str:
-    for pattern in compiled_patterns:
-        run_text = pattern.sub("[REDACTED]", run_text)
+    """compiled_patterns: list of (re.Pattern, validator | None)"""
+    for pattern, validator in compiled_patterns:
+        if validator is None:
+            run_text = pattern.sub("[REDACTED]", run_text)
+        else:
+            run_text = pattern.sub(
+                lambda m: "[REDACTED]" if validator(m.group()) else m.group(),
+                run_text,
+            )
     return run_text
 
 
@@ -288,16 +318,18 @@ def redact():
     except json.JSONDecodeError:
         return jsonify({"error": "Invalid patterns JSON"}), 400
 
+    # Build list of (compiled_pattern, validator | None) tuples.
     compiled = []
     for p in selected:
         ptype = p.get("type", "")
         if ptype in REDACT_PATTERNS:
-            compiled.append(re.compile(REDACT_PATTERNS[ptype], re.IGNORECASE))
+            validator = PATTERN_VALIDATORS.get(ptype)
+            compiled.append((re.compile(REDACT_PATTERNS[ptype], re.IGNORECASE), validator))
         elif ptype == "custom":
             raw = p.get("pattern", "").strip()
             if raw:
                 try:
-                    compiled.append(re.compile(raw))
+                    compiled.append((re.compile(raw), None))
                 except re.error as e:
                     return jsonify({"error": f"Invalid regex '{raw}': {e}"}), 400
 
