@@ -221,40 +221,132 @@
                 <p id="redactFileName" class="text-sm text-gray-500 mt-2"></p>
             </div>
 
-            <!-- Built-in Patterns -->
+            <!-- Patterns -->
             <div class="mb-6">
                 <p class="block text-gray-700 text-lg font-semibold mb-3">Patterns to Redact:</p>
-                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="ssn">
-                        <span class="text-gray-700 font-medium">SSN</span>
-                        <span class="text-xs text-gray-400">123-45-6789</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="email">
-                        <span class="text-gray-700 font-medium">Email</span>
-                        <span class="text-xs text-gray-400">user@example.com</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="phone">
-                        <span class="text-gray-700 font-medium">Phone</span>
-                        <span class="text-xs text-gray-400">555-867-5309</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="credit_card">
-                        <span class="text-gray-700 font-medium">Credit Card</span>
-                        <span class="text-xs text-gray-400">4111 1111 1111 1111</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="ip_address">
-                        <span class="text-gray-700 font-medium">IP Address</span>
-                        <span class="text-xs text-gray-400">192.168.1.1</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="date">
-                        <span class="text-gray-700 font-medium">Date</span>
-                        <span class="text-xs text-gray-400">MM/DD/YYYY</span>
-                    </label>
+
+                <!-- Group: Personal -->
+                <div class="mb-4 border border-gray-200 rounded-lg overflow-hidden">
+                    <button type="button" class="pattern-group-toggle w-full flex justify-between items-center px-4 py-2 bg-gray-50 text-gray-700 font-semibold text-sm hover:bg-gray-100 transition" data-target="grp-personal">
+                        Personal Identifiers
+                        <span class="text-gray-400 text-xs">▼</span>
+                    </button>
+                    <div id="grp-personal" class="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="ssn">
+                            <span class="text-gray-700 font-medium">SSN</span>
+                            <span class="text-xs text-gray-400">123-45-6789</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="email">
+                            <span class="text-gray-700 font-medium">Email</span>
+                            <span class="text-xs text-gray-400">user@example.com</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="phone">
+                            <span class="text-gray-700 font-medium">Phone</span>
+                            <span class="text-xs text-gray-400">555-867-5309</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="date">
+                            <span class="text-gray-700 font-medium">Date</span>
+                            <span class="text-xs text-gray-400">MM/DD/YYYY</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="ip_address">
+                            <span class="text-gray-700 font-medium">IP Address</span>
+                            <span class="text-xs text-gray-400">192.168.1.1</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Group: Financial -->
+                <div class="mb-4 border border-gray-200 rounded-lg overflow-hidden">
+                    <button type="button" class="pattern-group-toggle w-full flex justify-between items-center px-4 py-2 bg-gray-50 text-gray-700 font-semibold text-sm hover:bg-gray-100 transition" data-target="grp-financial">
+                        Financial Identifiers
+                        <span class="text-gray-400 text-xs">▼</span>
+                    </button>
+                    <div id="grp-financial" class="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="credit_card">
+                            <span class="text-gray-700 font-medium">Credit Card</span>
+                            <span class="text-xs text-gray-400">Luhn ✓</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="iban">
+                            <span class="text-gray-700 font-medium">IBAN</span>
+                            <span class="text-xs text-gray-400">MOD-97 ✓</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="swift_bic">
+                            <span class="text-gray-700 font-medium">SWIFT/BIC</span>
+                            <span class="text-xs text-gray-400">structural ✓</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="aba_routing">
+                            <span class="text-gray-700 font-medium">ABA Routing</span>
+                            <span class="text-xs text-gray-400">checksum ✓</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="uk_sort_code">
+                            <span class="text-gray-700 font-medium">UK Sort Code</span>
+                            <span class="text-xs text-gray-400">20-00-00</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Group: Named Fields -->
+                <div class="mb-4 border border-orange-200 rounded-lg overflow-hidden">
+                    <button type="button" class="pattern-group-toggle w-full flex justify-between items-center px-4 py-2 bg-orange-50 text-orange-800 font-semibold text-sm hover:bg-orange-100 transition" data-target="grp-named">
+                        Context-Aware (Named Fields)
+                        <span class="text-orange-400 text-xs">▼ highest accuracy — matches labeled values only</span>
+                    </button>
+                    <div id="grp-named" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-3 p-4">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="nf_account">
+                            <div><span class="text-gray-700 font-medium">Account Number field</span><br><span class="text-xs text-gray-400">Account Number: 123456789</span></div>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="nf_routing">
+                            <div><span class="text-gray-700 font-medium">Routing Number field</span><br><span class="text-xs text-gray-400">Routing: 021000021</span></div>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="nf_iban">
+                            <div><span class="text-gray-700 font-medium">IBAN field</span><br><span class="text-xs text-gray-400">IBAN: GB82 WEST...</span></div>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="nf_swift">
+                            <div><span class="text-gray-700 font-medium">SWIFT/BIC field</span><br><span class="text-xs text-gray-400">SWIFT: DEUTDEDB</span></div>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="nf_sort_code">
+                            <div><span class="text-gray-700 font-medium">Sort Code field</span><br><span class="text-xs text-gray-400">Sort Code: 20-00-00</span></div>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="nf_ssn">
+                            <div><span class="text-gray-700 font-medium">SSN field</span><br><span class="text-xs text-gray-400">SSN: 123-45-6789</span></div>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="nf_dob">
+                            <div><span class="text-gray-700 font-medium">Date of Birth field</span><br><span class="text-xs text-gray-400">DOB: 01/15/1990</span></div>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="nf_passport">
+                            <div><span class="text-gray-700 font-medium">Passport field</span><br><span class="text-xs text-gray-400">Passport No: AB123456</span></div>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="nf_dl">
+                            <div><span class="text-gray-700 font-medium">Driver's License field</span><br><span class="text-xs text-gray-400">DL: X1234567</span></div>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="nf_email">
+                            <div><span class="text-gray-700 font-medium">Email field</span><br><span class="text-xs text-gray-400">Email: user@example.com</span></div>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="nf_phone">
+                            <div><span class="text-gray-700 font-medium">Phone field</span><br><span class="text-xs text-gray-400">Phone: 555-867-5309</span></div>
+                        </label>
+                    </div>
                 </div>
             </div>
 
@@ -266,6 +358,15 @@
                         class="px-4 py-2 bg-gray-100 text-gray-700 font-semibold rounded-lg border border-gray-300 hover:bg-gray-200 transition duration-200 text-sm">
                     + Add Pattern
                 </button>
+            </div>
+
+            <!-- Do-Not-Redact Allowlist -->
+            <div class="mb-6">
+                <p class="block text-gray-700 text-lg font-semibold mb-1">Do-Not-Redact Allowlist:</p>
+                <p class="text-xs text-gray-400 mb-2">One value per line. Matching values are never redacted, even if they satisfy a pattern. Spacing and dashes are ignored when comparing.</p>
+                <textarea id="allowlistInput" rows="3"
+                          class="w-full p-3 border border-gray-300 rounded-lg text-sm text-gray-700 focus:ring-1 focus:ring-orange-400"
+                          placeholder="e.g. GB82 WEST 1234 5698 7654 32&#10;021000089&#10;4111 1111 1111 1111"></textarea>
             </div>
 
             <!-- Redact Button -->
@@ -894,6 +995,15 @@
         const customPatternList = document.getElementById('customPatternList');
         const redactButton = document.getElementById('redactButton');
         const redactStatus = document.getElementById('redactStatus');
+        const allowlistInput = document.getElementById('allowlistInput');
+
+        // Pattern group toggles
+        document.querySelectorAll('.pattern-group-toggle').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const target = document.getElementById(btn.dataset.target);
+                target.classList.toggle('hidden');
+            });
+        });
 
         redactFileInput.addEventListener('change', () => {
             const f = redactFileInput.files[0];
@@ -939,9 +1049,13 @@
             redactButton.textContent = 'Redacting…';
             showRedactStatus('Processing — this may take a moment for large files…', 'info');
 
+            const allowlist = (allowlistInput.value || '')
+                .split('\n').map(s => s.trim()).filter(s => s.length > 0);
+
             const formData = new FormData();
             formData.append('file', redactFileInput.files[0]);
             formData.append('patterns', JSON.stringify(patterns));
+            formData.append('allowlist', JSON.stringify(allowlist));
 
             try {
                 const response = await fetch('/redact', { method: 'POST', body: formData });

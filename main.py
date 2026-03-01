@@ -6,7 +6,9 @@ import json
 import uuid
 import base64
 import datetime
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable, Optional
 
 import fitz  # PyMuPDF
 from docx import Document
@@ -215,18 +217,18 @@ def delete_file(file_id):
 # Redaction
 # ========================
 
-REDACT_PATTERNS = {
-    "ssn":         r'\b\d{3}-\d{2}-\d{4}\b',
-    "email":       r'\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b',
-    "phone":       r'\b(\+1[\s.\-]?)?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}\b',
-    "credit_card": r'\b(?:\d{4}[\s\-]?){3}\d{4}\b',
-    "ip_address":  r'\b(?:\d{1,3}\.){3}\d{1,3}\b',
-    "date":        r'\b\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4}\b',
-}
+@dataclass
+class RedactRule:
+    name: str
+    pattern: re.Pattern
+    validator: Optional[Callable[[str], bool]] = None
+    value_group: int = 0  # 0 = redact full match; 1 = redact captured group only (named fields)
 
+
+# ---------- Validators ----------
 
 def _luhn_check(value: str) -> bool:
-    """Return True if the digits in value pass the Luhn checksum."""
+    """Credit card: Luhn checksum."""
     digits = [int(c) for c in value if c.isdigit()]
     if len(digits) < 13:
         return False
@@ -240,23 +242,202 @@ def _luhn_check(value: str) -> bool:
     return total % 10 == 0
 
 
-# Maps pattern type -> post-match validator (None means accept all matches).
-PATTERN_VALIDATORS = {
-    "credit_card": _luhn_check,
+def _aba_routing_check(value: str) -> bool:
+    """US ABA routing number: 9-digit checksum + valid Federal Reserve prefix."""
+    digits = [int(c) for c in value if c.isdigit()]
+    if len(digits) != 9:
+        return False
+    prefix = digits[0] * 10 + digits[1]
+    if not ((1 <= prefix <= 12) or (21 <= prefix <= 32)):
+        return False
+    total = (3 * (digits[0] + digits[3] + digits[6]) +
+             7 * (digits[1] + digits[4] + digits[7]) +
+             1 * (digits[2] + digits[5] + digits[8]))
+    return total % 10 == 0
+
+
+# IBAN: country code -> expected total character length (ISO 13616)
+_IBAN_LENGTHS = {
+    'AL': 28, 'AD': 24, 'AT': 20, 'AZ': 28, 'BH': 22, 'BY': 28, 'BE': 16,
+    'BA': 20, 'BR': 29, 'BG': 22, 'CR': 22, 'HR': 21, 'CY': 28, 'CZ': 24,
+    'DK': 18, 'DO': 28, 'SV': 28, 'EE': 20, 'EG': 29, 'FO': 18, 'FI': 18,
+    'FR': 27, 'GE': 22, 'DE': 22, 'GI': 23, 'GR': 27, 'GL': 18, 'GT': 28,
+    'HU': 28, 'IS': 26, 'IQ': 23, 'IE': 22, 'IL': 23, 'IT': 27, 'JO': 30,
+    'KZ': 20, 'XK': 20, 'KW': 30, 'LV': 21, 'LB': 28, 'LY': 25, 'LI': 21,
+    'LT': 20, 'LU': 20, 'MT': 31, 'MR': 27, 'MU': 30, 'MD': 24, 'MC': 27,
+    'MN': 20, 'ME': 22, 'NL': 18, 'MK': 19, 'NO': 15, 'PK': 24, 'PS': 29,
+    'PL': 28, 'PT': 25, 'QA': 29, 'RO': 24, 'RU': 33, 'LC': 32, 'SM': 27,
+    'ST': 25, 'SA': 24, 'RS': 22, 'SC': 31, 'SK': 24, 'SI': 19, 'ES': 24,
+    'SD': 18, 'SE': 24, 'CH': 21, 'TL': 23, 'TN': 24, 'TR': 26, 'UA': 29,
+    'AE': 23, 'GB': 22, 'VA': 22, 'VG': 24, 'YE': 30,
 }
 
 
-def _redact_pdf(file_bytes: bytes, compiled_patterns: list) -> io.BytesIO:
-    """compiled_patterns: list of (re.Pattern, validator | None)"""
+def _iban_check(value: str) -> bool:
+    """IBAN: MOD-97 checksum + ISO country length validation."""
+    clean = re.sub(r'[\s\-]', '', value).upper()
+    country = clean[:2]
+    if not country.isalpha():
+        return False
+    expected = _IBAN_LENGTHS.get(country)
+    if expected is None or len(clean) != expected:
+        return False
+    rearranged = clean[4:] + clean[:4]
+    numeric = ''.join(str(ord(c) - 55) if c.isalpha() else c for c in rearranged)
+    # Process in chunks to avoid int overflow on long IBANs
+    remainder = 0
+    for i in range(0, len(numeric), 9):
+        remainder = int(str(remainder) + numeric[i:i + 9]) % 97
+    return remainder == 1
+
+
+def _swift_bic_check(value: str) -> bool:
+    """SWIFT/BIC: structural validation (length 8 or 11, correct character classes)."""
+    clean = re.sub(r'\s', '', value).upper()
+    if len(clean) not in (8, 11):
+        return False
+    return bool(re.match(r'^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$', clean))
+
+
+# ---------- Pattern registry ----------
+
+# Standalone patterns (value_group=0 — full match is the sensitive span).
+REDACT_PATTERNS = {
+    # Personal
+    "ssn":          r'\b\d{3}-\d{2}-\d{4}\b',
+    "email":        r'\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b',
+    "phone":        r'\b(\+1[\s.\-]?)?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}\b',
+    "date":         r'\b\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4}\b',
+    "ip_address":   r'\b(?:\d{1,3}\.){3}\d{1,3}\b',
+    # Financial (all have validators to minimise false positives)
+    "credit_card":  r'\b(?:\d{4}[\s\-]?){3}\d{4}\b',
+    "iban":         r'\b[A-Z]{2}\d{2}(?:[A-Z0-9]{1,4}\s?){3,8}\b',
+    "swift_bic":    r'\b[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?\b',
+    "aba_routing":  r'\b\d{9}\b',
+    "uk_sort_code": r'\b\d{2}[-\s]\d{2}[-\s]\d{2}\b',
+}
+
+PATTERN_VALIDATORS: dict[str, Callable] = {
+    "credit_card":  _luhn_check,
+    "iban":         _iban_check,
+    "swift_bic":    _swift_bic_check,
+    "aba_routing":  _aba_routing_check,
+    # uk_sort_code: purely structural, no algorithmic checksum exists
+}
+
+# Context-aware patterns (value_group=1 — capture group 1 is the sensitive value;
+# the label is matched but kept visible). Format: (regex_string, value_group).
+NAMED_FIELD_PATTERNS: dict[str, tuple[str, int]] = {
+    # Financial
+    "nf_account":   (r'(?:account\s*(?:number|num|no|#))\s*[:=\-]\s*(\d[\d\s\-]{5,19}\d)', 1),
+    "nf_routing":   (r'(?:routing\s*(?:number|num|no|#|transit)?)\s*[:=\-]\s*(\d{9})', 1),
+    "nf_iban":      (r'(?:iban)\s*[:=\-]\s*([A-Z]{2}\d{2}[A-Z0-9 ]{10,30})', 1),
+    "nf_swift":     (r'(?:swift(?:\s*/?bic)?|bic(?:\s*code)?)\s*[:=\-]\s*([A-Z]{4}[A-Z]{2}[A-Z0-9]{2,5})', 1),
+    "nf_sort_code": (r'(?:sort\s*code)\s*[:=\-]\s*(\d{2}[-\s]\d{2}[-\s]\d{2})', 1),
+    # Personal
+    "nf_dob":       (r'(?:dob|date\s+of\s+birth|birth\s*date)\s*[:=\-]\s*(\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4})', 1),
+    "nf_ssn":       (r'(?:ssn|social\s+security(?:\s+number)?)\s*[:=\-]\s*(\d{3}[-\s]?\d{2}[-\s]?\d{4})', 1),
+    "nf_passport":  (r'(?:passport\s*(?:number|num|no|#)?)\s*[:=\-]\s*([A-Z0-9]{6,9})', 1),
+    "nf_dl":        (r'(?:driver(?:\'s)?\s+licen[sc]e|dl)\s*[:=\-]\s*([A-Z0-9\-]{4,20})', 1),
+    "nf_email":     (r'(?:email|e-mail)\s*[:=\-]\s*([A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,})', 1),
+    "nf_phone":     (r'(?:phone|tel|telephone|mobile|cell)\s*[:=\-]\s*([\+\d][\d\s\-\(\)\.]{7,20})', 1),
+}
+
+# Named-field validators applied to the extracted value (group 1).
+NF_VALIDATORS: dict[str, Callable] = {
+    "nf_routing":  _aba_routing_check,
+    "nf_iban":     _iban_check,
+    "nf_swift":    _swift_bic_check,
+}
+
+
+# ---------- Allowlist helpers ----------
+
+def _normalize(value: str) -> str:
+    """Normalize for allowlist comparison: strip spaces/dashes, uppercase."""
+    return re.sub(r'[\s\-]+', '', value).upper()
+
+
+# ---------- Rule compilation ----------
+
+def _build_rules(selected: list[dict]) -> list[RedactRule]:
+    rules = []
+    for p in selected:
+        ptype = p.get("type", "")
+        if ptype in REDACT_PATTERNS:
+            rules.append(RedactRule(
+                name=ptype,
+                pattern=re.compile(REDACT_PATTERNS[ptype], re.IGNORECASE),
+                validator=PATTERN_VALIDATORS.get(ptype),
+                value_group=0,
+            ))
+        elif ptype in NAMED_FIELD_PATTERNS:
+            raw, grp = NAMED_FIELD_PATTERNS[ptype]
+            rules.append(RedactRule(
+                name=ptype,
+                pattern=re.compile(raw, re.IGNORECASE),
+                validator=NF_VALIDATORS.get(ptype),
+                value_group=grp,
+            ))
+        elif ptype == "custom":
+            raw = p.get("pattern", "").strip()
+            if raw:
+                try:
+                    rules.append(RedactRule(
+                        name="custom",
+                        pattern=re.compile(raw),
+                        validator=None,
+                        value_group=0,
+                    ))
+                except re.error as e:
+                    raise ValueError(f"Invalid regex '{raw}': {e}")
+    return rules
+
+
+# ---------- Redaction helpers ----------
+
+def _make_run_replacer(rule: RedactRule, allowlist: set[str]):
+    """Return a re.sub callable that respects the rule's value_group and allowlist."""
+    def replacer(m: re.Match) -> str:
+        try:
+            candidate = m.group(rule.value_group)
+        except IndexError:
+            candidate = m.group(0)
+        if candidate is None:
+            return m.group(0)
+        if _normalize(candidate) in allowlist:
+            return m.group(0)
+        if rule.validator and not rule.validator(candidate):
+            return m.group(0)
+        if rule.value_group == 0:
+            return "[REDACTED]"
+        # Named field: keep the label, replace only the captured value span.
+        full = m.group(0)
+        start = m.start(rule.value_group) - m.start(0)
+        end = m.end(rule.value_group) - m.start(0)
+        return full[:start] + "[REDACTED]" + full[end:]
+    return replacer
+
+
+def _redact_pdf(file_bytes: bytes, rules: list[RedactRule], allowlist: set[str]) -> io.BytesIO:
     doc = fitz.open(stream=file_bytes, filetype="pdf")
     for page in doc:
         text = page.get_text()
-        matched_strings = set()
-        for pattern, validator in compiled_patterns:
-            for m in pattern.finditer(text):
-                if validator is None or validator(m.group()):
-                    matched_strings.add(m.group())
-        for s in matched_strings:
+        to_redact: set[str] = set()
+        for rule in rules:
+            for m in rule.pattern.finditer(text):
+                try:
+                    candidate = m.group(rule.value_group)
+                except IndexError:
+                    candidate = m.group(0)
+                if not candidate:
+                    continue
+                if _normalize(candidate) in allowlist:
+                    continue
+                if rule.validator and not rule.validator(candidate):
+                    continue
+                to_redact.add(candidate)
+        for s in to_redact:
             for rect in page.search_for(s):
                 page.add_redact_annot(rect, fill=(0, 0, 0))
         page.apply_redactions(images=fitz.PDF_REDACT_IMAGE_NONE)
@@ -266,26 +447,19 @@ def _redact_pdf(file_bytes: bytes, compiled_patterns: list) -> io.BytesIO:
     return buf
 
 
-def _redact_text_in_run(run_text: str, compiled_patterns: list) -> str:
-    """compiled_patterns: list of (re.Pattern, validator | None)"""
-    for pattern, validator in compiled_patterns:
-        if validator is None:
-            run_text = pattern.sub("[REDACTED]", run_text)
-        else:
-            run_text = pattern.sub(
-                lambda m: "[REDACTED]" if validator(m.group()) else m.group(),
-                run_text,
-            )
+def _redact_text_in_run(run_text: str, rules: list[RedactRule], allowlist: set[str]) -> str:
+    for rule in rules:
+        run_text = rule.pattern.sub(_make_run_replacer(rule, allowlist), run_text)
     return run_text
 
 
-def _redact_docx(file_bytes: bytes, compiled_patterns: list) -> io.BytesIO:
+def _redact_docx(file_bytes: bytes, rules: list[RedactRule], allowlist: set[str]) -> io.BytesIO:
     doc = Document(io.BytesIO(file_bytes))
 
     def redact_paragraphs(paragraphs):
         for para in paragraphs:
             for run in para.runs:
-                run.text = _redact_text_in_run(run.text, compiled_patterns)
+                run.text = _redact_text_in_run(run.text, rules, allowlist)
 
     redact_paragraphs(doc.paragraphs)
     for table in doc.tables:
@@ -312,28 +486,24 @@ def redact():
     if ext not in (".pdf", ".docx"):
         return jsonify({"error": f"Unsupported file type '{ext}'. Supported: .pdf, .docx"}), 400
 
-    patterns_json = request.form.get("patterns", "[]")
     try:
-        selected = json.loads(patterns_json)
+        selected = json.loads(request.form.get("patterns", "[]"))
     except json.JSONDecodeError:
         return jsonify({"error": "Invalid patterns JSON"}), 400
 
-    # Build list of (compiled_pattern, validator | None) tuples.
-    compiled = []
-    for p in selected:
-        ptype = p.get("type", "")
-        if ptype in REDACT_PATTERNS:
-            validator = PATTERN_VALIDATORS.get(ptype)
-            compiled.append((re.compile(REDACT_PATTERNS[ptype], re.IGNORECASE), validator))
-        elif ptype == "custom":
-            raw = p.get("pattern", "").strip()
-            if raw:
-                try:
-                    compiled.append((re.compile(raw), None))
-                except re.error as e:
-                    return jsonify({"error": f"Invalid regex '{raw}': {e}"}), 400
+    try:
+        allowlist_raw = json.loads(request.form.get("allowlist", "[]"))
+    except json.JSONDecodeError:
+        return jsonify({"error": "Invalid allowlist JSON"}), 400
 
-    if not compiled:
+    allowlist = {_normalize(s) for s in allowlist_raw if isinstance(s, str) and s.strip()}
+
+    try:
+        rules = _build_rules(selected)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    if not rules:
         return jsonify({"error": "No valid patterns selected"}), 400
 
     file_bytes = uploaded.read()
@@ -341,10 +511,10 @@ def redact():
 
     try:
         if ext == ".pdf":
-            result = _redact_pdf(file_bytes, compiled)
+            result = _redact_pdf(file_bytes, rules, allowlist)
             mime = "application/pdf"
         else:
-            result = _redact_docx(file_bytes, compiled)
+            result = _redact_docx(file_bytes, rules, allowlist)
             mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     except Exception as e:
         return jsonify({"error": f"Redaction failed: {e}"}), 500
