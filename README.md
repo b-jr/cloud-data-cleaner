@@ -26,7 +26,7 @@
 | Backend  | Python 3 (Flask)                                     |
 | Crypto   | cryptography library (Fernet / PBKDF2)               |
 | Redaction | PyMuPDF (PDF), python-docx (DOCX), spaCy NER        |
-| AI Advisor | Anthropic API — Claude Sonnet 4.6                  |
+| AI Advisor | Anthropic API — Claude Sonnet 5.5                  |
 | Storage  | Local JSON files (`~/.cloud-data-cleaner/files/`)    |
 
 ---
@@ -166,6 +166,7 @@ cloud-data-cleaner/
 ├── main.py            # Flask backend (encryption, redaction, AI advisor)
 ├── index.html         # Frontend UI (three tabs: Cipher, Redact, AI Advisor)
 ├── requirements.txt   # Python dependencies
+├── tests/             # unittest suite (see tests/README.md)
 ├── README.md          # This file
 └── README.old.md      # Archived cloud version documentation
 ```

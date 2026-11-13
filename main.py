@@ -171,7 +171,7 @@ def save_file():
         "file_name": file_name,
         "cipher_type": cipher_type,
         "content": content,
-        "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z"),
     }
 
     file_path = FILES_DIR / f"{file_id}.json"
@@ -689,7 +689,7 @@ def ai_advisor():
     try:
         client = anthropic.Anthropic(api_key=api_key)
         response = client.messages.create(
-            model="claude-sonnet-4-6",
+            model="claude-sonnet-5-5",
             max_tokens=1024,
             system=_ADVISOR_SYSTEM,
             messages=[{"role": "user", "content": user_prompt}],
@@ -711,7 +711,13 @@ def ai_advisor():
                 }
             },
         )
-        result = json.loads(response.content[0].text)
+        if response.stop_reason == "refusal":
+            return jsonify({"error": "The AI advisor declined this request."}), 502
+        # Newer models may return a thinking block before the text block.
+        text = next((b.text for b in response.content if b.type == "text"), None)
+        if text is None:
+            return jsonify({"error": "AI advisor returned no answer."}), 502
+        result = json.loads(text)
         valid_patterns = [p for p in result.get("patterns", []) if p in _ALL_PATTERN_KEYS]
         return jsonify({"patterns": valid_patterns, "explanation": result.get("explanation", "")}), 200
 
