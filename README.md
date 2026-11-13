@@ -43,20 +43,28 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/cloud-data-cleaner.git
+git clone https://github.com/b-jr/cloud-data-cleaner.git
 cd cloud-data-cleaner
 
+# Create and activate a virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
 # Install dependencies
-pip install -r requirements.txt --break-system-packages
+pip install -r requirements.txt
 
 # Download the spaCy language model (required for name detection)
-python3 -m spacy download en_core_web_sm
+python -m spacy download en_core_web_sm
 ```
+
+The virtual environment keeps the app's packages separate from your system Python.
+Run `source .venv/bin/activate` in each new terminal before starting the app.
 
 ### Running the App
 
 ```bash
-python3 main.py
+source .venv/bin/activate
+python main.py
 ```
 
 The server starts at **http://localhost:8080**. Open this URL in your browser.
@@ -65,13 +73,13 @@ To enable the AI Advisor, set your Anthropic API key before starting:
 
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
-python3 main.py
+python main.py
 ```
 
 To enable debug mode:
 
 ```bash
-DEBUG=True python3 main.py
+DEBUG=True python main.py
 ```
 
 ---

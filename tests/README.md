@@ -7,7 +7,7 @@ Unit and API tests for `main.py`, written with Python's built-in `unittest` (no 
 From the project root:
 
 ```bash
-python3 -m unittest discover -s tests -v
+python -m unittest discover -s tests -v
 ```
 
 ## Requirements
