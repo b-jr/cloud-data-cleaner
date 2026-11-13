@@ -119,6 +119,10 @@
                     class="tab-btn px-6 py-3 font-semibold text-gray-500 border-b-2 border-transparent hover:text-gray-700 focus:outline-none">
                 Redact Documents
             </button>
+            <button id="tabAdvisor"
+                    class="tab-btn px-6 py-3 font-semibold text-gray-500 border-b-2 border-transparent hover:text-gray-700 focus:outline-none">
+                AI Advisor
+            </button>
         </div>
 
         <!-- ======================== -->
@@ -397,6 +401,59 @@
             <p id="redactStatus" class="text-center text-sm mt-2 hidden"></p>
 
         </div><!-- end #panelRedact -->
+
+        <!-- ======================== -->
+        <!-- AI ADVISOR PANEL        -->
+        <!-- ======================== -->
+        <div id="panelAdvisor" class="hidden">
+
+            <div class="bg-violet-50 border border-violet-200 rounded-lg p-4 mb-6">
+                <p class="text-violet-800 text-sm font-medium">Your document content is never sent to the AI. Only your description is used to recommend patterns.</p>
+            </div>
+
+            <!-- Document Type -->
+            <div class="mb-5">
+                <label for="advisorDocType" class="block text-gray-700 text-lg font-semibold mb-2">What kind of document is it?</label>
+                <input type="text" id="advisorDocType"
+                       placeholder="e.g. bank statement, medical record, HR employee file, legal contract..."
+                       class="w-full p-3 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-violet-400 focus:border-transparent">
+            </div>
+
+            <!-- Optional Notes -->
+            <div class="mb-6">
+                <label for="advisorNotes" class="block text-gray-700 font-semibold mb-2">Anything else to know? <span class="text-gray-400 font-normal text-sm">(optional)</span></label>
+                <textarea id="advisorNotes" rows="2"
+                          placeholder="e.g. contains UK banking info, or: names have already been removed..."
+                          class="w-full p-3 border border-gray-300 rounded-lg text-sm text-gray-700 focus:ring-1 focus:ring-violet-400"></textarea>
+            </div>
+
+            <!-- Ask Button -->
+            <div class="flex justify-center mb-6">
+                <button id="advisorAskBtn"
+                        class="px-10 py-4 bg-violet-600 text-white font-bold text-lg rounded-xl shadow-md hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-400 transition duration-300 transform hover:scale-105">
+                    Ask Claude
+                </button>
+            </div>
+
+            <p id="advisorStatus" class="text-center text-sm mb-4 hidden"></p>
+
+            <!-- Results -->
+            <div id="advisorResults" class="hidden">
+                <div class="border border-violet-200 rounded-lg p-5 bg-white mb-4">
+                    <p class="text-gray-700 font-semibold mb-3">Recommended patterns:</p>
+                    <div id="advisorPatternList" class="flex flex-wrap gap-2 mb-4"></div>
+                    <p class="text-gray-500 text-sm font-semibold mb-1">Why:</p>
+                    <p id="advisorExplanation" class="text-gray-600 text-sm leading-relaxed"></p>
+                </div>
+                <div class="flex justify-center">
+                    <button id="advisorApplyBtn"
+                            class="px-8 py-3 bg-orange-500 text-white font-bold rounded-xl shadow-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 transition duration-300 transform hover:scale-105">
+                        Apply to Redact Tab
+                    </button>
+                </div>
+            </div>
+
+        </div><!-- end #panelAdvisor -->
     </div>
 
     <!-- Save File Modal -->
@@ -980,28 +1037,36 @@
         // ========================
         const tabCipher = document.getElementById('tabCipher');
         const tabRedact = document.getElementById('tabRedact');
+        const tabAdvisor = document.getElementById('tabAdvisor');
         const panelCipher = document.getElementById('panelCipher');
         const panelRedact = document.getElementById('panelRedact');
+        const panelAdvisor = document.getElementById('panelAdvisor');
 
         function activateTab(tab) {
+            panelCipher.classList.add('hidden');
+            panelRedact.classList.add('hidden');
+            panelAdvisor.classList.add('hidden');
+            [tabCipher, tabRedact, tabAdvisor].forEach(t => {
+                t.classList.add('text-gray-500', 'border-transparent');
+                t.classList.remove('text-blue-600', 'border-blue-600', 'text-orange-500', 'border-orange-500', 'text-violet-600', 'border-violet-600');
+            });
             if (tab === 'cipher') {
                 panelCipher.classList.remove('hidden');
-                panelRedact.classList.add('hidden');
-                tabCipher.classList.add('text-blue-600', 'border-blue-600');
                 tabCipher.classList.remove('text-gray-500', 'border-transparent');
-                tabRedact.classList.add('text-gray-500', 'border-transparent');
-                tabRedact.classList.remove('text-orange-500', 'border-orange-500');
-            } else {
-                panelCipher.classList.add('hidden');
+                tabCipher.classList.add('text-blue-600', 'border-blue-600');
+            } else if (tab === 'redact') {
                 panelRedact.classList.remove('hidden');
-                tabRedact.classList.add('text-orange-500', 'border-orange-500');
                 tabRedact.classList.remove('text-gray-500', 'border-transparent');
-                tabCipher.classList.add('text-gray-500', 'border-transparent');
-                tabCipher.classList.remove('text-blue-600', 'border-blue-600');
+                tabRedact.classList.add('text-orange-500', 'border-orange-500');
+            } else {
+                panelAdvisor.classList.remove('hidden');
+                tabAdvisor.classList.remove('text-gray-500', 'border-transparent');
+                tabAdvisor.classList.add('text-violet-600', 'border-violet-600');
             }
         }
         tabCipher.addEventListener('click', () => activateTab('cipher'));
         tabRedact.addEventListener('click', () => activateTab('redact'));
+        tabAdvisor.addEventListener('click', () => activateTab('advisor'));
 
         // ========================
         // Redact Panel Logic
@@ -1116,6 +1181,97 @@
             else redactStatus.classList.add('text-blue-500');
             redactStatus.classList.remove('hidden');
         }
+
+        // ========================
+        // AI Advisor Panel
+        // ========================
+        const advisorDocType = document.getElementById('advisorDocType');
+        const advisorNotes = document.getElementById('advisorNotes');
+        const advisorAskBtn = document.getElementById('advisorAskBtn');
+        const advisorStatus = document.getElementById('advisorStatus');
+        const advisorResults = document.getElementById('advisorResults');
+        const advisorPatternList = document.getElementById('advisorPatternList');
+        const advisorExplanation = document.getElementById('advisorExplanation');
+        const advisorApplyBtn = document.getElementById('advisorApplyBtn');
+
+        let lastAdvisedPatterns = [];
+
+        function showAdvisorStatus(msg, type) {
+            advisorStatus.textContent = msg;
+            advisorStatus.className = 'text-center text-sm mb-4';
+            if (type === 'error') advisorStatus.classList.add('text-red-500');
+            else if (type === 'success') advisorStatus.classList.add('text-green-600');
+            else advisorStatus.classList.add('text-violet-600');
+            advisorStatus.classList.remove('hidden');
+        }
+
+        advisorAskBtn.addEventListener('click', async () => {
+            const docType = advisorDocType.value.trim();
+            if (!docType) {
+                showAdvisorStatus('Please describe the document type first.', 'error');
+                return;
+            }
+
+            advisorResults.classList.add('hidden');
+            advisorAskBtn.disabled = true;
+            advisorAskBtn.textContent = 'Asking Claude…';
+            showAdvisorStatus('Consulting Claude — no document content is sent…', 'info');
+
+            try {
+                const response = await fetch('/ai_advisor', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ doc_type: docType, notes: advisorNotes.value.trim() })
+                });
+                const result = await response.json();
+
+                if (!response.ok) {
+                    showAdvisorStatus(result.error || 'Request failed.', 'error');
+                    return;
+                }
+
+                lastAdvisedPatterns = result.patterns || [];
+                advisorExplanation.textContent = result.explanation || '';
+
+                advisorPatternList.innerHTML = '';
+                if (lastAdvisedPatterns.length === 0) {
+                    advisorPatternList.innerHTML = '<span class="text-gray-400 text-sm">No specific patterns recommended.</span>';
+                } else {
+                    lastAdvisedPatterns.forEach(p => {
+                        const badge = document.createElement('span');
+                        badge.className = 'px-3 py-1 bg-violet-100 text-violet-800 text-sm font-medium rounded-full';
+                        badge.textContent = p;
+                        advisorPatternList.appendChild(badge);
+                    });
+                }
+
+                advisorResults.classList.remove('hidden');
+                advisorStatus.classList.add('hidden');
+            } catch (err) {
+                showAdvisorStatus(`Server error: ${err.message}. Is the backend running?`, 'error');
+            } finally {
+                advisorAskBtn.disabled = false;
+                advisorAskBtn.textContent = 'Ask Claude';
+            }
+        });
+
+        advisorApplyBtn.addEventListener('click', () => {
+            // Uncheck all pattern checkboxes in the Redact tab
+            document.querySelectorAll('.redact-pattern-cb').forEach(cb => {
+                cb.checked = false;
+            });
+            // Check the recommended ones
+            lastAdvisedPatterns.forEach(p => {
+                const cb = document.querySelector(`.redact-pattern-cb[value="${p}"]`);
+                if (cb) cb.checked = true;
+            });
+            // Expand all pattern groups so checked items are visible
+            document.querySelectorAll('.pattern-group-toggle').forEach(btn => {
+                const target = document.getElementById(btn.dataset.target);
+                if (target) target.classList.remove('hidden');
+            });
+            activateTab('redact');
+        });
 
         // ========================
         // Init

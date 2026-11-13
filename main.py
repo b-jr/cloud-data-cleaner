@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Optional
 
+import anthropic
 import fitz  # PyMuPDF
 import spacy
 from docx import Document
@@ -610,6 +611,114 @@ def redact():
         return jsonify({"error": f"Redaction failed: {e}"}), 500
 
     return send_file(result, mimetype=mime, as_attachment=True, download_name=redacted_name)
+
+
+# ========================
+# AI Advisor
+# ========================
+
+_ALL_PATTERN_KEYS = (
+    list(REDACT_PATTERNS.keys()) + list(NAMED_FIELD_PATTERNS.keys()) + ["spacy_ner"]
+)
+
+_PATTERN_DESCRIPTIONS = {
+    "ssn":          "Social Security Numbers (123-45-6789)",
+    "email":        "Email addresses",
+    "phone":        "Phone numbers",
+    "date":         "Dates in MM/DD/YYYY format",
+    "ip_address":   "IP addresses",
+    "credit_card":  "Credit card numbers (Luhn-validated)",
+    "iban":         "International Bank Account Numbers (MOD-97 validated)",
+    "swift_bic":    "SWIFT/BIC codes",
+    "aba_routing":  "US ABA routing numbers (checksum validated)",
+    "uk_sort_code": "UK sort codes (20-00-00)",
+    "spacy_ner":    "Person names detected by AI — may have false positives",
+    "nf_account":   "Account Number labeled fields (e.g. Account Number: 123456)",
+    "nf_routing":   "Routing Number labeled fields",
+    "nf_iban":      "IBAN labeled fields (e.g. IBAN: GB82 WEST...)",
+    "nf_swift":     "SWIFT/BIC labeled fields",
+    "nf_sort_code": "Sort Code labeled fields",
+    "nf_ssn":       "SSN labeled fields",
+    "nf_dob":       "Date of Birth labeled fields",
+    "nf_passport":  "Passport Number labeled fields",
+    "nf_dl":        "Driver's License labeled fields",
+    "nf_email":     "Email labeled fields",
+    "nf_phone":     "Phone labeled fields",
+}
+
+_ADVISOR_SYSTEM = (
+    "You are a privacy and data redaction expert. "
+    "You help users decide which types of sensitive data to redact from documents "
+    "based solely on the document type — you never see the actual document content. "
+    "Be practical: recommend patterns that are realistically likely to appear in the "
+    "described document. Avoid recommending patterns that would almost never appear."
+)
+
+
+@app.route("/ai_advisor", methods=["POST"])
+def ai_advisor():
+    """Recommend redaction patterns based on document type description (no content sent)."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No JSON data provided"}), 400
+
+    doc_type = (data.get("doc_type") or "").strip()
+    notes = (data.get("notes") or "").strip()
+
+    if not doc_type:
+        return jsonify({"error": "doc_type is required"}), 400
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        return jsonify({"error": "ANTHROPIC_API_KEY environment variable is not set."}), 503
+
+    pattern_list = "\n".join(
+        f"- {k}: {_PATTERN_DESCRIPTIONS[k]}" for k in _ALL_PATTERN_KEYS
+    )
+
+    user_prompt = (
+        f"Document type: {doc_type}\n"
+        + (f"Additional context: {notes}\n" if notes else "")
+        + f"\nAvailable redaction patterns:\n{pattern_list}\n\n"
+        "Which patterns should be applied to this document type? "
+        "Return a JSON object with:\n"
+        '- "patterns": array of pattern keys to enable (only keys from the list above)\n'
+        '- "explanation": one short paragraph explaining your choices'
+    )
+
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=1024,
+            system=_ADVISOR_SYSTEM,
+            messages=[{"role": "user", "content": user_prompt}],
+            output_config={
+                "format": {
+                    "type": "json_schema",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "patterns": {
+                                "type": "array",
+                                "items": {"type": "string", "enum": _ALL_PATTERN_KEYS},
+                            },
+                            "explanation": {"type": "string"},
+                        },
+                        "required": ["patterns", "explanation"],
+                        "additionalProperties": False,
+                    },
+                }
+            },
+        )
+        result = json.loads(response.content[0].text)
+        valid_patterns = [p for p in result.get("patterns", []) if p in _ALL_PATTERN_KEYS]
+        return jsonify({"patterns": valid_patterns, "explanation": result.get("explanation", "")}), 200
+
+    except anthropic.AuthenticationError:
+        return jsonify({"error": "Invalid ANTHROPIC_API_KEY. Check your key and try again."}), 401
+    except Exception as e:
+        return jsonify({"error": f"AI advisor error: {e}"}), 500
 
 
 if __name__ == "__main__":
