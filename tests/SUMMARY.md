@@ -1,6 +1,6 @@
 # Test Summary
 
-**Result:** 26 tests, all passing (`python3 -m unittest discover -s tests`)
+**Result:** 29 tests, all passing (`python -m unittest discover -s tests`)
 
 The suite is split into five groups:
 
@@ -19,19 +19,20 @@ The suite is split into five groups:
 - `/save_file` rejects requests with missing fields.
 - `/delete_file` rejects IDs that aren't UUIDs (path-traversal guard) and returns `404` for unknown IDs.
 
-## 4. Validators & Text Redaction (11 tests)
+## 4. Validators & Text Redaction (13 tests)
 - Luhn (credit card), ABA routing, IBAN MOD-97 and SWIFT/BIC checks accept valid values and reject invalid ones.
-- SSNs and emails are replaced with `[REDACTED]`, but card numbers that fail the Luhn check are left alone.
+- SSNs (`123-45-6789` or `123 45 6789`) and emails are replaced with `[REDACTED]`, but card numbers that fail the Luhn check are left alone.
 - Named fields keep their label (`Account Number: [REDACTED]`).
 - Allowlisted values are kept, and custom names are redacted.
 - SWIFT/BIC matching is case-sensitive, so ordinary words like "Referred" aren't redacted.
 - An invalid custom regex raises `ValueError`.
 
-## 5. Redact Endpoint & AI Advisor (5 tests)
+## 5. Redact Endpoint & AI Advisor (6 tests)
 - `/redact` on a DOCX returns `redacted_<name>.docx` with the sensitive values removed.
+- `/redact` on a PDF removes both dashed and spaced SSNs from the page text.
 - Unsupported file types and empty pattern lists return `400`.
 - `/ai_advisor` returns `503` without `ANTHROPIC_API_KEY` and `400` without `doc_type`.
 
 ---
 
-**Not covered yet:** PDF redaction, spaCy name detection (`spacy_ner`), and a successful AI Advisor call (this would need a mocked Claude response).
+**Not covered yet:** spaCy name detection (`spacy_ner`), and a successful AI Advisor call (this would need a mocked Claude response).

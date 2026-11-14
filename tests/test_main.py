@@ -171,6 +171,14 @@ class TestTextRedaction(unittest.TestCase):
         out = self.redact("SSN 123-45-6789, mail bob@example.com", ["ssn", "email"])
         self.assertEqual(out, "SSN [REDACTED], mail [REDACTED]")
 
+    def test_ssn_with_spaces(self):
+        out = self.redact("SSN 123 45 6789 on file", ["ssn"])
+        self.assertEqual(out, "SSN [REDACTED] on file")
+
+    def test_ssn_mixed_separators_not_matched(self):
+        # Separators must match, so "123 45-6789" is left alone.
+        self.assertEqual(self.redact("123 45-6789", ["ssn"]), "123 45-6789")
+
     def test_invalid_card_not_redacted(self):
         out = self.redact("card 4111 1111 1111 1112", ["credit_card"])
         self.assertIn("4111 1111 1111 1112", out)
@@ -224,6 +232,20 @@ class TestRedactEndpoint(BaseTestCase):
         self.assertNotIn("jane@example.com", text)
         self.assertNotIn("123-45-6789", text)
         self.assertIn("[REDACTED]", text)
+
+    def test_redacts_spaced_ssn_in_pdf(self):
+        import fitz
+        src = fitz.open()
+        page = src.new_page()
+        page.insert_text((72, 72), "Employee SSN 123 45 6789 and 987-65-4321")
+        pdf_bytes = src.tobytes()
+
+        resp = self._post(pdf_bytes, "form.pdf", [{"type": "ssn"}])
+        self.assertEqual(resp.status_code, 200)
+        text = fitz.open(stream=resp.data, filetype="pdf")[0].get_text()
+        self.assertNotIn("123 45 6789", text)
+        self.assertNotIn("987-65-4321", text)
+        self.assertIn("Employee SSN", text)
 
     def test_rejects_unsupported_type(self):
         resp = self._post(b"hello", "notes.txt", [{"type": "email"}])

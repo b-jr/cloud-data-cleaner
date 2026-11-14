@@ -306,7 +306,8 @@ def _swift_bic_check(value: str) -> bool:
 # Standalone patterns (value_group=0 — full match is the sensitive span).
 REDACT_PATTERNS = {
     # Personal
-    "ssn":          r'\b\d{3}-\d{2}-\d{4}\b',
+    # 123-45-6789 or 123 45 6789 (the same separator must be used both times)
+    "ssn":          r'\b\d{3}([- ])\d{2}\1\d{4}\b',
     "email":        r'\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b',
     "phone":        r'\b(\+1[\s.\-]?)?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}\b',
     "date":         r'\b\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4}\b',
@@ -622,7 +623,7 @@ _ALL_PATTERN_KEYS = (
 )
 
 _PATTERN_DESCRIPTIONS = {
-    "ssn":          "Social Security Numbers (123-45-6789)",
+    "ssn":          "Social Security Numbers (123-45-6789 or 123 45 6789)",
     "email":        "Email addresses",
     "phone":        "Phone numbers",
     "date":         "Dates in MM/DD/YYYY format",
