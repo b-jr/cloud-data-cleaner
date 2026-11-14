@@ -116,6 +116,7 @@ DEBUG=True ./run.sh
 2. Upload a `.pdf` or `.docx` file
 3. Select the patterns to redact (SSN, email, credit card, etc.)
 4. Optionally add specific names to always redact, or an allowlist of values to preserve
+   - Enter each name once, e.g. `Michael R. Johnson` or `Johnson, Michael R.` — both orders are matched, with or without the middle initial and its period
 5. Click **Redact & Download** — a new file is downloaded with sensitive data permanently removed
 
 **Supported redaction patterns:**

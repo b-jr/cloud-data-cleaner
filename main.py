@@ -376,6 +376,64 @@ def _normalize(value: str) -> str:
     return re.sub(r'[\s\-]+', '', value).upper()
 
 
+# ---------- Name matching ----------
+
+# Not glued to a letter/digit on either side. Unlike \b, this still works when
+# a name starts or ends with punctuation, e.g. the period in "Michael R.".
+_NOT_WORD_BEFORE = r'(?<!\w)'
+_NOT_WORD_AFTER = r'(?!\w)'
+
+
+def _name_token_regex(token: str) -> str:
+    """Regex for one name token; a single-letter initial matches with or without a period."""
+    bare = token.rstrip(".")
+    if len(bare) == 1 and bare.isalpha():
+        return re.escape(bare) + r'\.?'
+    return re.escape(token)
+
+
+def _exact_name_regex(name: str) -> str:
+    """Regex for a name exactly as written (flexible whitespace only)."""
+    return _NOT_WORD_BEFORE + r'\s+'.join(re.escape(t) for t in name.split()) + _NOT_WORD_AFTER
+
+
+def _name_variants_regex(name: str) -> str:
+    """Regex matching a person's name in common orders.
+
+    Accepts "First M. Last" or "Last, First M." as input and matches either
+    order, with or without the middle name/initial, with or without the
+    period after an initial, and with any amount of whitespace.
+    """
+    name = " ".join(name.split())
+    if "," in name:
+        last_part, _, rest = name.partition(",")
+        last = last_part.split()
+        rest = rest.split()
+        if not last or not rest:
+            return _exact_name_regex(name.replace(",", " "))
+        first, middles = rest[0], rest[1:]
+    else:
+        tokens = name.split()
+        if len(tokens) < 2:
+            return _exact_name_regex(name)
+        first, middles, last = tokens[0], tokens[1:-1], [tokens[-1]]
+
+    sp = r'\s+'
+    first_re = _name_token_regex(first)
+    last_re = sp.join(_name_token_regex(t) for t in last)
+    middle_re = "".join(sp + _name_token_regex(t) for t in middles)
+    if middles:
+        middle_opt = f"(?:{middle_re})?"
+    else:
+        # No middle given: still allow one capital initial ("Michael R. Johnson"),
+        # case-sensitive so ordinary words like "a" aren't swallowed.
+        middle_opt = r'(?:\s+(?-i:[A-Z])\.?)?'
+
+    forward = first_re + middle_opt + sp + last_re          # Michael R. Johnson
+    reverse = last_re + r'\s*,\s*' + first_re + middle_opt  # Johnson, Michael R.
+    return _NOT_WORD_BEFORE + f"(?:{reverse}|{forward})" + _NOT_WORD_AFTER
+
+
 # ---------- spaCy NER ----------
 
 _nlp = None  # lazy-loaded on first use
@@ -454,7 +512,7 @@ def _build_rules(selected: list[dict], names: list[str]) -> tuple[list[RedactRul
         if name:
             rules.append(RedactRule(
                 name=f"name:{name}",
-                pattern=re.compile(r'\b' + re.escape(name) + r'\b', re.IGNORECASE),
+                pattern=re.compile(_name_variants_regex(name), re.IGNORECASE),
                 validator=None,
                 value_group=0,
             ))
@@ -554,7 +612,8 @@ def _redact_docx(file_bytes: bytes, rules: list[RedactRule], allowlist: set[str]
                 names = _spacy_persons(para_text, allowlist)
                 if names:
                     extra_pattern = re.compile(
-                        "|".join(r"\b" + re.escape(n) + r"\b" for n in names),
+                        # Longest first, so "Michael R. Johnson" wins over "Michael R."
+                        "|".join(_exact_name_regex(n) for n in sorted(names, key=len, reverse=True)),
                         re.IGNORECASE,
                     )
             for run in para.runs:

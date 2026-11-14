@@ -210,6 +210,31 @@ class TestTextRedaction(unittest.TestCase):
         out = self.redact("Report by Jane Doe.", [], names=["Jane Doe"])
         self.assertEqual(out, "Report by [REDACTED].")
 
+    def test_custom_name_ending_in_initial(self):
+        # A trailing "." used to break the \b word-boundary match.
+        out = self.redact("Patient: Johnson, Michael R. was seen.", [], names=["Johnson, Michael R."])
+        self.assertEqual(out, "Patient: [REDACTED] was seen.")
+
+    def test_custom_name_matches_other_orders(self):
+        for entry in ["Michael R. Johnson", "Johnson, Michael R."]:
+            for text in ["Johnson, Michael R. signed", "Johnson,  Michael R signed",
+                         "Michael R. Johnson signed", "Michael Johnson signed",
+                         "Johnson, Michael signed"]:
+                with self.subTest(entry=entry, text=text):
+                    self.assertEqual(self.redact(text, [], names=[entry]), "[REDACTED] signed")
+
+    def test_custom_name_without_middle_allows_initial(self):
+        out = self.redact("Johnson, Michael R. and Michael R. Johnson", [], names=["Michael Johnson"])
+        self.assertEqual(out, "[REDACTED] and [REDACTED]")
+
+    def test_custom_name_leaves_partial_words(self):
+        text = "Michael Johnsonville, Johnson Michaels, Michael alone, Johnson alone"
+        self.assertEqual(self.redact(text, [], names=["Michael Johnson"]), text)
+
+    def test_custom_name_does_not_swallow_next_word(self):
+        out = self.redact("Johnson, Michael a day late", [], names=["Michael Johnson"])
+        self.assertEqual(out, "[REDACTED] a day late")
+
     def test_swift_ignores_ordinary_words(self):
         # Mixed-case words must not match; a real uppercase BIC must.
         out = self.redact("This was Referred to bank DEUTDEFF", ["swift_bic"])
@@ -261,6 +286,48 @@ class TestRedactEndpoint(BaseTestCase):
         self.assertNotIn("123 45 6789", text)
         self.assertNotIn("987-65-4321", text)
         self.assertIn("Employee SSN", text)
+
+    def _post_names(self, data_bytes, filename, patterns, names):
+        return self.client.post("/redact", data={
+            "file": (io.BytesIO(data_bytes), filename),
+            "patterns": json.dumps(patterns),
+            "names": json.dumps(names),
+        }, content_type="multipart/form-data")
+
+    def _pdf_bytes(self, text):
+        import fitz
+        doc = fitz.open()
+        doc.new_page().insert_text((72, 72), text)
+        return doc.tobytes()
+
+    def _pdf_text(self, data):
+        import fitz
+        return fitz.open(stream=data, filetype="pdf")[0].get_text()
+
+    def _docx_text(self, data):
+        return "\n".join(p.text for p in Document(io.BytesIO(data)).paragraphs)
+
+    def test_custom_last_first_name_in_docx_and_pdf(self):
+        text = "Patient: Johnson, Michael R. was admitted."
+        resp = self._post_names(self._docx_bytes(text), "a.docx", [], ["Michael R. Johnson"])
+        self.assertEqual(self._docx_text(resp.data), "Patient: [REDACTED] was admitted.")
+
+        resp = self._post_names(self._pdf_bytes(text), "a.pdf", [], ["Michael R. Johnson"])
+        out = self._pdf_text(resp.data)
+        self.assertNotIn("Johnson", out)
+        self.assertNotIn("Michael", out)
+        self.assertIn("was admitted", out)
+
+    def test_ner_last_first_name_in_docx(self):
+        try:
+            main._get_nlp()
+        except OSError:
+            self.skipTest("spaCy model en_core_web_sm not installed")
+        text = "Patient: Johnson, Michael R. was admitted."
+        resp = self._post(self._docx_bytes(text), "a.docx", [{"type": "spacy_ner"}])
+        out = self._docx_text(resp.data)
+        self.assertNotIn("Johnson", out)
+        self.assertNotIn("Michael", out)
 
     def test_rejects_unsupported_type(self):
         resp = self._post(b"hello", "notes.txt", [{"type": "email"}])
