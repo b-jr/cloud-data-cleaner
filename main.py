@@ -275,6 +275,18 @@ _IBAN_LENGTHS = {
 }
 
 
+def _ssn_check(value: str) -> bool:
+    """SSN: reject numbers the SSA never issues (area 000/666/900-999,
+    group 00, serial 0000)."""
+    digits = re.sub(r'\D', '', value)
+    if len(digits) != 9:
+        return False
+    area, group, serial = digits[:3], digits[3:5], digits[5:]
+    if area == "000" or area == "666" or area[0] == "9":
+        return False
+    return group != "00" and serial != "0000"
+
+
 def _iban_check(value: str) -> bool:
     """IBAN: MOD-97 checksum + ISO country length validation."""
     clean = re.sub(r'[\s\-]', '', value).upper()
@@ -308,6 +320,8 @@ REDACT_PATTERNS = {
     # Personal
     # 123-45-6789 or 123 45 6789 (the same separator must be used both times)
     "ssn":          r'\b\d{3}([- ])\d{2}\1\d{4}\b',
+    # 123456789 — opt-in, since any 9-digit number looks like this
+    "ssn_nodash":   r'\b\d{9}\b',
     "email":        r'\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b',
     "phone":        r'\b(\+1[\s.\-]?)?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}\b',
     "date":         r'\b\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4}\b',
@@ -321,6 +335,7 @@ REDACT_PATTERNS = {
 }
 
 PATTERN_VALIDATORS: dict[str, Callable] = {
+    "ssn_nodash":   _ssn_check,
     "credit_card":  _luhn_check,
     "iban":         _iban_check,
     "swift_bic":    _swift_bic_check,
@@ -624,6 +639,7 @@ _ALL_PATTERN_KEYS = (
 
 _PATTERN_DESCRIPTIONS = {
     "ssn":          "Social Security Numbers (123-45-6789 or 123 45 6789)",
+    "ssn_nodash":   "SSNs written as 9 digits with no separators (123456789) — also matches other 9-digit numbers such as routing or order numbers",
     "email":        "Email addresses",
     "phone":        "Phone numbers",
     "date":         "Dates in MM/DD/YYYY format",

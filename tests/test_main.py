@@ -179,6 +179,21 @@ class TestTextRedaction(unittest.TestCase):
         # Separators must match, so "123 45-6789" is left alone.
         self.assertEqual(self.redact("123 45-6789", ["ssn"]), "123 45-6789")
 
+    def test_ssn_no_dashes(self):
+        out = self.redact("SSN 123456789 on file", ["ssn_nodash"])
+        self.assertEqual(out, "SSN [REDACTED] on file")
+
+    def test_ssn_no_dashes_is_opt_in(self):
+        # The regular SSN pattern must not catch bare 9-digit numbers.
+        self.assertEqual(self.redact("123456789", ["ssn"]), "123456789")
+
+    def test_ssn_no_dashes_skips_impossible_numbers(self):
+        for n in ["000123456", "666123456", "900123456", "123004567", "123450000"]:
+            self.assertEqual(self.redact(n, ["ssn_nodash"]), n, n)
+
+    def test_ssn_no_dashes_ignores_longer_numbers(self):
+        self.assertEqual(self.redact("Order 1234567890", ["ssn_nodash"]), "Order 1234567890")
+
     def test_invalid_card_not_redacted(self):
         out = self.redact("card 4111 1111 1111 1112", ["credit_card"])
         self.assertIn("4111 1111 1111 1112", out)

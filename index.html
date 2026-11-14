@@ -242,6 +242,14 @@
                             <span class="text-xs text-gray-400">123-45-6789 / 123 45 6789</span>
                         </label>
                         <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="ssn_nodash">
+                            <div>
+                                <span class="text-gray-700 font-medium">SSN (no dashes)</span>
+                                <span class="text-xs text-gray-400">123456789</span>
+                                <br><span class="text-xs text-orange-500">Also catches other 9-digit numbers</span>
+                            </div>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
                             <input type="checkbox" class="redact-pattern-cb w-4 h-4 accent-orange-500" value="email">
                             <span class="text-gray-700 font-medium">Email</span>
                             <span class="text-xs text-gray-400">user@example.com</span>

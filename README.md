@@ -122,7 +122,7 @@ DEBUG=True ./run.sh
 
 | Category | Patterns |
 |----------|----------|
-| Personal | SSN, Email, Phone, Date, IP Address, Person Names (NER) |
+| Personal | SSN (dashes or spaces), SSN without separators (opt-in), Email, Phone, Date, IP Address, Person Names (NER) |
 | Financial | Credit Card (Luhn), IBAN (MOD-97), SWIFT/BIC, ABA Routing, UK Sort Code |
 | Named Fields | Labeled fields like `Account Number: ...`, `DOB: ...`, `Passport No: ...` |
 
