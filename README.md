@@ -63,9 +63,11 @@ Run `source .venv/bin/activate` in each new terminal before starting the app.
 ### Running the App
 
 ```bash
-source .venv/bin/activate
-python main.py
+./run.sh
 ```
+
+`run.sh` starts the app with the virtual environment, so you don't need to activate it first.
+(Running `python3 main.py` without the virtual environment fails with `No module named 'anthropic'`.)
 
 The server starts at **http://localhost:8080**. Open this URL in your browser.
 
@@ -73,13 +75,13 @@ To enable the AI Advisor, set your Anthropic API key before starting:
 
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
-python main.py
+./run.sh
 ```
 
 To enable debug mode:
 
 ```bash
-DEBUG=True python main.py
+DEBUG=True ./run.sh
 ```
 
 ---
@@ -172,6 +174,7 @@ The AI Advisor helps you choose which patterns to enable without ever seeing you
 ```
 cloud-data-cleaner/
 ├── main.py            # Flask backend (encryption, redaction, AI advisor)
+├── run.sh             # Starts the app using .venv
 ├── index.html         # Frontend UI (three tabs: Cipher, Redact, AI Advisor)
 ├── requirements.txt   # Python dependencies
 ├── tests/             # unittest suite (see tests/README.md)
